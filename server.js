@@ -17,20 +17,23 @@ const io = new Server(httpServer, {
 const rooms = new Map();
 
 io.on("connection", (socket) => {
-  console.log("User connected:", socket.id);
-
+  console.log(`[Socket] New connection: ${socket.id}`);
+  
   socket.on("join-room", ({ roomId, username }) => {
     socket.join(roomId);
-    console.log(`${username} joined room: ${roomId}`);
-
+    
     if (!rooms.has(roomId)) {
       rooms.set(roomId, { users: [] });
     }
+    
     const room = rooms.get(roomId);
     if (!room.users.find(u => u.id === socket.id)) {
       room.users.push({ id: socket.id, username });
     }
 
+    console.log(`[Room ${roomId}] ${username} (${socket.id}) joined. Total users: ${room.users.length}`);
+
+    // Notify others
     socket.to(roomId).emit("user-joined", { id: socket.id, username });
     
     // Send list of existing users to the new user
@@ -38,6 +41,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("send-message", ({ roomId, message, username, timestamp }) => {
+    console.log(`[Chat ${roomId}] Message from ${username}`);
     io.to(roomId).emit("receive-message", { message, username, timestamp });
   });
 
