@@ -255,6 +255,9 @@ export default function VideoCall({ socket, roomId, username, localScreenStream,
         <button onClick={toggleVideo} className={`btn ${isVideoOff ? 'btn-secondary' : 'btn-primary'}`} style={{ borderRadius: '50%', width: '45px', height: '45px', padding: '0' }}>
           {isVideoOff ? <VideoOff size={20} /> : <Video size={20} />}
         </button>
+        <button onClick={() => window.location.href = '/dashboard'} className="btn btn-error" style={{ borderRadius: '50%', width: '45px', height: '45px', padding: '0', background: 'var(--error)', color: 'white' }}>
+          <PhoneOff size={20} />
+        </button>
       </div>
     </div>
   );
