@@ -64,8 +64,30 @@ export default function VideoCall({ socket, roomId, username, localScreenStream,
   useEffect(() => {
     if (!socket) return;
 
+    // Listen for signaling even before local stream is ready
+    socket.on('signal', async ({ senderId, signal }) => {
+      let pc = peersRef.current[senderId];
+      if (!pc) {
+        // Wait for local stream if not ready
+        const stream = localStream || await initLocalStream();
+        if (!stream) return;
+        pc = createPeerConnection(senderId, stream);
+      }
+
+      if (signal.type === 'offer') {
+        await pc.setRemoteDescription(new RTCSessionDescription(signal));
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        socket.emit('signal', { roomId, targetId: senderId, signal: answer });
+      } else if (signal.type === 'answer') {
+        await pc.setRemoteDescription(new RTCSessionDescription(signal));
+      } else if (signal.candidate) {
+        await pc.addIceCandidate(new RTCIceCandidate(signal));
+      }
+    });
+
     const startCall = async () => {
-      const stream = await initLocalStream();
+      const stream = localStream || await initLocalStream();
       if (!stream) return;
 
       socket.on('user-joined', async ({ id, username: otherName }) => {
@@ -76,24 +98,6 @@ export default function VideoCall({ socket, roomId, username, localScreenStream,
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
         socket.emit('signal', { roomId, targetId: id, signal: offer });
-      });
-
-      socket.on('signal', async ({ senderId, signal }) => {
-        let pc = peersRef.current[senderId];
-        if (!pc) {
-          pc = createPeerConnection(senderId, stream);
-        }
-
-        if (signal.type === 'offer') {
-          await pc.setRemoteDescription(new RTCSessionDescription(signal));
-          const answer = await pc.createAnswer();
-          await pc.setLocalDescription(answer);
-          socket.emit('signal', { roomId, targetId: senderId, signal: answer });
-        } else if (signal.type === 'answer') {
-          await pc.setRemoteDescription(new RTCSessionDescription(signal));
-        } else if (signal.candidate) {
-          await pc.addIceCandidate(new RTCIceCandidate(signal));
-        }
       });
 
       socket.on('user-left', ({ id }) => {
@@ -124,9 +128,8 @@ export default function VideoCall({ socket, roomId, username, localScreenStream,
       socket.off('signal');
       socket.off('user-left');
       socket.off('existing-users');
-      Object.values(peersRef.current).forEach(pc => pc.close());
     };
-  }, [socket]); // Note: localScreenStream is handled in a separate useEffect to avoid restarting call
+  }, [socket, localStream]);
 
   // Handle local screen stream changes
   useEffect(() => {
