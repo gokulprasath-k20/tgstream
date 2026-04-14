@@ -141,13 +141,18 @@ export default function Room() {
           <h1 style={{ fontSize: '1.5rem', fontWeight: 700 }}>
             Room: <span style={{ color: 'var(--primary)' }}>{roomId}</span>
           </h1>
-          <button 
-            onClick={() => { navigator.clipboard.writeText(roomId); }}
-            className="btn btn-secondary flex items-center gap-2" 
-            style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}
-          >
-            <Copy size={14} /> Copy ID
-          </button>
+            <button 
+              onClick={() => { 
+                navigator.clipboard.writeText(roomId);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+              }}
+              className="btn btn-secondary flex items-center gap-2" 
+              style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}
+            >
+              {copied ? <CheckCircle size={14} style={{ color: 'var(--success)' }} /> : <Clipboard size={14} />}
+              {copied ? 'Copied' : 'Copy ID'}
+            </button>
         </div>
         
         <span className="flex items-center gap-2" style={{ color: 'var(--success)', fontSize: '0.8rem' }}>
@@ -168,10 +173,10 @@ export default function Room() {
             remoteScreenStream={remoteScreenStream}
           />
         </div>
-      </div>
+        </div>
 
-      {/* 25% SIDE PANEL (Video Call + Chat) */}
-      <div className="sidebar-mobile" style={{ display: 'flex', flexDirection: 'column', background: 'rgba(0,0,0,0.2)' }}>
+        {/* 25% SIDE PANEL (Video Call + Chat) */}
+        <div className="sidebar-mobile" style={{ display: 'flex', flexDirection: 'column', background: 'rgba(0,0,0,0.2)', borderLeft: '1px solid var(--border)' }}>
         <div className="flex" style={{ borderBottom: '1px solid var(--border)' }}>
           {[
             { id: 'call', icon: <Video size={18} />, label: 'Call' },
@@ -226,6 +231,7 @@ export default function Room() {
               ))}
             </div>
           )}
+        </div>
         </div>
       </div>
     </div>
