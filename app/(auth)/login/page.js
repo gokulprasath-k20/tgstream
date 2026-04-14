@@ -1,10 +1,10 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { LogIn, Mail, Lock, Loader2 } from 'lucide-react';
 
-export default function Login() {
+function LoginForm() {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -32,7 +32,7 @@ export default function Login() {
 
       const data = await res.json();
       if (res.ok) {
-        window.location.href = '/dashboard'; // Force full reload for auth state
+        window.location.href = '/dashboard'; 
       } else {
         setError(data.error || 'Invalid credentials');
       }
@@ -99,5 +99,13 @@ export default function Login() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function Login() {
+  return (
+    <Suspense fallback={<div className="container flex justify-center items-center h-screen">Loading...</div>}>
+      <LoginForm />
+    </Suspense>
   );
 }
