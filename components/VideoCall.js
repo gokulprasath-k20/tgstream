@@ -165,12 +165,28 @@ export default function VideoCall({ socket, roomId, username, localScreenStream,
   const createPeerConnection = (targetId, stream, targetName) => {
     const pc = new RTCPeerConnection({
       iceServers: [
+        // STUN servers
         { urls: 'stun:stun.l.google.com:19302' },
         { urls: 'stun:stun1.l.google.com:19302' },
         { urls: 'stun:stun2.l.google.com:19302' },
         { urls: 'stun:stun.services.mozilla.com' },
-        { urls: 'stun:stun.vidyo.com' },
-        { urls: 'stun:stun.l.google.com:19305' },
+        
+        // TURN servers (Relay data when STUN fails)
+        {
+          urls: "turn:global.relay.metered.ca:80",
+          username: process.env.NEXT_PUBLIC_TURN_USERNAME,
+          credential: process.env.NEXT_PUBLIC_TURN_PASSWORD
+        },
+        {
+          urls: "turn:global.relay.metered.ca:443",
+          username: process.env.NEXT_PUBLIC_TURN_USERNAME,
+          credential: process.env.NEXT_PUBLIC_TURN_PASSWORD
+        },
+        {
+          urls: "turn:global.relay.metered.ca:443?transport=tcp",
+          username: process.env.NEXT_PUBLIC_TURN_USERNAME,
+          credential: process.env.NEXT_PUBLIC_TURN_PASSWORD
+        }
       ]
     });
 
