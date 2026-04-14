@@ -290,8 +290,20 @@ export default function VideoCall({ socket, roomId, username, localScreenStream,
                   el.play().catch(e => console.log("Autoplay blocked:", e));
                 }
               }}
+              onClick={(e) => e.target.play()}
             />
-            <div style={{ position: 'absolute', bottom: '10px', left: '10px', background: 'rgba(0,0,0,0.5)', padding: '2px 8px', borderRadius: '4px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '5px' }}>
+            <div 
+              onClick={(e) => {
+                const video = e.currentTarget.parentElement.querySelector('video');
+                if (video) video.play();
+              }}
+              style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 5 }}
+            >
+              <span style={{ background: 'rgba(0,0,0,0.6)', padding: '5px 12px', borderRadius: '20px', fontSize: '0.7rem', color: 'white', opacity: 0.8 }}>
+                Trouble seeing video? Tap here
+              </span>
+            </div>
+            <div style={{ position: 'absolute', bottom: '10px', left: '10px', background: 'rgba(0,0,0,0.5)', padding: '2px 8px', borderRadius: '4px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '5px', zIndex: 10 }}>
               {peer.username}
               {process.env.NEXT_PUBLIC_TURN_USERNAME && <span title="Relay Active" style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981' }}></span>}
             </div>
