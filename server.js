@@ -20,6 +20,12 @@ io.on("connection", (socket) => {
   console.log(`[Socket] New connection: ${socket.id}`);
   
   socket.on("join-room", ({ roomId, username }) => {
+    // Audit Adjustment: Handle cleaning up ghost users with same username
+    const existingRoom = rooms.get(roomId);
+    if (existingRoom) {
+      existingRoom.users = existingRoom.users.filter(u => u.username !== username);
+    }
+
     socket.join(roomId);
     
     if (!rooms.has(roomId)) {
@@ -31,22 +37,18 @@ io.on("connection", (socket) => {
       room.users.push({ id: socket.id, username });
     }
 
-    console.log(`[Room ${roomId}] ${username} (${socket.id}) joined. Total users: ${room.users.length}`);
+    console.log(`[Room ${roomId}] ${username} joined. Total: ${room.users.length}`);
 
-    // Notify others that a user is in the room
     socket.to(roomId).emit("user-joined", { id: socket.id, username });
     socket.emit("existing-users", room.users.filter(u => u.id !== socket.id));
 
-    // Special event to trigger handshake once camera is ready
     socket.on("ready-for-handshake", () => {
-      console.log(`[Handshake] ${username} is ready for signals.`);
       socket.to(roomId).emit("initiate-call", { id: socket.id, username });
     });
   });
 
-  socket.on("send-message", ({ roomId, message, username, timestamp }) => {
-    console.log(`[Chat ${roomId}] Message from ${username}`);
-    io.to(roomId).emit("receive-message", { message, username, timestamp });
+  socket.on("send-message", ({ roomId, ...msgData }) => {
+    io.to(roomId).emit("receive-message", msgData);
   });
 
   socket.on("signal", ({ targetId, signal }) => {

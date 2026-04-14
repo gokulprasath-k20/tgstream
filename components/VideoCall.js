@@ -80,9 +80,8 @@ export default function VideoCall({ socket, roomId, username, localScreenStream,
 
     pc.ontrack = (e) => {
       const remoteStream = e.streams[0];
-      console.log("[WebRTC] Track received:", e.track.kind);
-
-      // Handle Screen Share specifically (if it's a second stream)
+      
+      // Determine if this is a screen share by checking stream count or custom stream ID markers
       if (e.streams.length > 1 || (e.track.kind === 'video' && e.streams[0].id.includes('screen'))) {
         onRemoteScreenStream(e.streams[1] || e.streams[0]);
       } else {
@@ -91,6 +90,10 @@ export default function VideoCall({ socket, roomId, username, localScreenStream,
           return [...prev, { id: targetId, stream: remoteStream, username: targetName || 'User' }];
         });
       }
+    };
+
+    pc.onremovetrack = () => {
+      onRemoteScreenStream(null);
     };
 
     return pc;
@@ -150,8 +153,19 @@ export default function VideoCall({ socket, roomId, username, localScreenStream,
     });
   }, [localScreenStream]);
 
-  const toggleMute = () => { localStream.getAudioTracks()[0].enabled = isMuted; setIsMuted(!isMuted); };
-  const toggleVideo = () => { localStream.getVideoTracks()[0].enabled = isVideoOff; setIsVideoOff(!isVideoOff); };
+  const toggleMute = () => { 
+    if (localStream) {
+      localStream.getAudioTracks()[0].enabled = isMuted; 
+      setIsMuted(!isMuted); 
+    }
+  };
+  
+  const toggleVideo = () => { 
+    if (localStream) {
+      localStream.getVideoTracks()[0].enabled = isVideoOff; 
+      setIsVideoOff(!isVideoOff); 
+    }
+  };
 
   return (
     <div className="flex flex-col h-full gap-4">
