@@ -16,10 +16,17 @@ export default function VideoCall({ socket, roomId, username, localScreenStream,
   useEffect(() => {
     const init = async () => {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 15 } }, 
+          audio: true 
+        });
         setLocalStream(stream);
         if (localVideoRef.current) localVideoRef.current.srcObject = stream;
-        socket.emit('ready-for-handshake');
+        
+        // Wait a tiny bit for the OS to lock the camera, then signal
+        setTimeout(() => {
+          socket.emit('ready-for-handshake');
+        }, 500);
       } catch (err) {
         console.error("Camera error:", err);
       }
@@ -35,6 +42,7 @@ export default function VideoCall({ socket, roomId, username, localScreenStream,
     const pc = new RTCPeerConnection({
       iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
         ...(process.env.NEXT_PUBLIC_TURN_USERNAME ? [
           {
             urls: "turn:global.relay.metered.ca:80",
@@ -52,66 +60,71 @@ export default function VideoCall({ socket, roomId, username, localScreenStream,
 
     pcsRef.current[targetId] = pc;
 
-    // Add Video/Audio Tracks
+    // Add Video/Audio Tracks with IDs to differentiate
     if (stream) {
       stream.getTracks().forEach(track => pc.addTrack(track, stream));
     }
 
-    // Add Screen Share Tracks if active
+    // Add Screen Share Tracks
     if (localScreenStream) {
-      const senders = localScreenStream.getTracks().map(track => pc.addTrack(track, localScreenStream));
-      screenSendersRef.current[targetId] = senders;
+      localScreenStream.getTracks().forEach(track => {
+        pc.addTrack(track, localScreenStream);
+      });
     }
 
     pc.onicecandidate = (e) => {
       if (e.candidate) {
-        socket.emit('signal', { targetId, signal: e.candidate });
+        socket.emit('signal', { targetId, signal: { candidate: e.candidate } });
       }
     };
 
     pc.ontrack = (e) => {
       const remoteStream = e.streams[0];
-      
-      // If this is a secondary video track, it is likely a SCREEN SHARE
-      if (e.track.kind === 'video' && e.streams[0].getVideoTracks().length > 1) {
-        onRemoteScreenStream(new MediaStream([e.track]));
-        return;
-      }
+      console.log("[WebRTC] Track received:", e.track.kind);
 
-      setRemoteStreams(prev => {
-        if (prev.find(p => p.id === targetId)) return prev;
-        return [...prev, { id: targetId, stream: remoteStream, username: targetName || 'User' }];
-      });
+      // Handle Screen Share specifically (if it's a second stream)
+      if (e.streams.length > 1 || (e.track.kind === 'video' && e.streams[0].id.includes('screen'))) {
+        onRemoteScreenStream(e.streams[1] || e.streams[0]);
+      } else {
+        setRemoteStreams(prev => {
+          if (prev.find(p => p.id === targetId)) return prev;
+          return [...prev, { id: targetId, stream: remoteStream, username: targetName || 'User' }];
+        });
+      }
     };
 
     return pc;
   };
 
-  // 3. Signaling & Screen Toggle
+  // 3. Perfect Negotiation Signaling
   useEffect(() => {
     if (!socket || !localStream) return;
 
-    socket.on('initiate-call', ({ id, username: name }) => {
+    // A existing user sees a "ready" signal and sends an Offer
+    socket.on('initiate-call', async ({ id, username: name }) => {
       const pc = createPC(id, localStream, name);
-      pc.createOffer().then(offer => {
-        pc.setLocalDescription(offer);
-        socket.emit('signal', { targetId: id, signal: offer });
-      });
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      socket.emit('signal', { targetId: id, signal: offer });
     });
 
     socket.on('signal', async ({ senderId, signal }) => {
       let pc = pcsRef.current[senderId];
       if (!pc) pc = createPC(senderId, localStream);
 
-      if (signal.type === 'offer') {
-        await pc.setRemoteDescription(new RTCSessionDescription(signal));
-        const answer = await pc.createAnswer();
-        await pc.setLocalDescription(answer);
-        socket.emit('signal', { targetId: senderId, signal: answer });
-      } else if (signal.type === 'answer') {
-        await pc.setRemoteDescription(new RTCSessionDescription(signal));
-      } else if (signal.candidate) {
-        await pc.addIceCandidate(new RTCIceCandidate(signal.candidate)).catch(() => {});
+      try {
+        if (signal.type === 'offer') {
+          await pc.setRemoteDescription(new RTCSessionDescription(signal));
+          const answer = await pc.createAnswer();
+          await pc.setLocalDescription(answer);
+          socket.emit('signal', { targetId: senderId, signal: answer });
+        } else if (signal.type === 'answer') {
+          await pc.setRemoteDescription(new RTCSessionDescription(signal));
+        } else if (signal.candidate) {
+          await pc.addIceCandidate(new RTCIceCandidate(signal.candidate));
+        }
+      } catch (err) {
+        console.warn("[WebRTC] Signal handling error:", err);
       }
     });
 
@@ -119,34 +132,20 @@ export default function VideoCall({ socket, roomId, username, localScreenStream,
       socket.off('initiate-call');
       socket.off('signal');
     };
-  }, [socket, localStream, localScreenStream]);
+  }, [socket, localStream]);
 
-  // Handle LOCAL SCREEN SHARE changes (dynamic adding/removing)
+  // Handle Screen Share Toggles
   useEffect(() => {
-    if (!localScreenStream) {
-      // Remove screen tracks from all PCs
-      Object.keys(screenSendersRef.current).forEach(id => {
-        const pc = pcsRef.current[id];
-        const senders = screenSendersRef.current[id];
-        if (pc && senders) {
-          senders.forEach(s => pc.removeTrack(s));
-          delete screenSendersRef.current[id];
-        }
-      });
-      return;
-    }
-
-    // Add screen tracks to all active PCs
-    Object.keys(pcsRef.current).forEach(id => {
+    if (!localScreenStream) return;
+    
+    // Notify others that we are sharing screen and re-negotiate
+    Object.keys(pcsRef.current).forEach(async (id) => {
       const pc = pcsRef.current[id];
-      if (pc && !screenSendersRef.current[id]) {
-        const senders = localScreenStream.getTracks().map(track => pc.addTrack(track, localScreenStream));
-        screenSendersRef.current[id] = senders;
-        // Trigger re-negotiation
-        pc.createOffer().then(offer => {
-          pc.setLocalDescription(offer);
-          socket.emit('signal', { targetId: id, signal: offer });
-        });
+      if (pc) {
+        localScreenStream.getTracks().forEach(track => pc.addTrack(track, localScreenStream));
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        socket.emit('signal', { targetId: id, signal: offer });
       }
     });
   }, [localScreenStream]);
@@ -157,33 +156,31 @@ export default function VideoCall({ socket, roomId, username, localScreenStream,
   return (
     <div className="flex flex-col h-full gap-4">
       <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-3">
-        {/* You */}
         <div className="card" style={{ padding: 0, overflow: 'hidden', position: 'relative', background: '#000' }}>
           <video ref={localVideoRef} autoPlay muted playsInline className="w-full" style={{ minHeight: '160px', objectFit: 'cover', transform: 'scaleX(-1)' }} />
           <div style={{ position: 'absolute', bottom: '8px', left: '8px', background: 'rgba(0,0,0,0.6)', color: '#fff', fontSize: '0.7rem', padding: '2px 8px', borderRadius: '4px' }}>You {isMuted && '🔇'}</div>
         </div>
 
-        {/* Friends */}
         {remoteStreams.map(peer => (
           <div key={peer.id} className="card" style={{ padding: 0, overflow: 'hidden', position: 'relative', background: '#000' }}>
             <video autoPlay playsInline className="w-full" style={{ minHeight: '160px', objectFit: 'cover' }} ref={el => { if (el) el.srcObject = peer.stream; }} />
-            <div style={{ position: 'absolute', bottom: '8px', left: '8px', background: 'rgba(0,0,0,0.6)', color: '#fff', fontSize: '0.7rem', padding: '2px 8px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <div style={{ position: 'absolute', bottom: '8px', left: '8px', background: 'rgba(0,0,0,0.1)', color: '#fff', fontSize: '0.75rem', padding: '4px 10px', borderRadius: '10px' }}>
               {peer.username}
-              <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e' }} title="Secure Relay" />
             </div>
+            {/* Overlay to ensure audio starts on touch */}
             <div onClick={(e) => e.currentTarget.parentElement.querySelector('video').play()} style={{ position: 'absolute', inset: 0, cursor: 'pointer' }} />
           </div>
         ))}
       </div>
 
       <div className="flex justify-center items-center gap-3 p-3 bg-secondary rounded-xl border border-border mt-auto">
-        <button onClick={toggleMute} className="btn" style={{ background: isMuted ? 'var(--error)' : 'var(--bg-card)', color: isMuted ? '#fff' : 'var(--text)', borderRadius: '50%', width: 40, height: 40, padding: 0 }}>
-          {isMuted ? <MicOff size={18} /> : <Mic size={18} />}
+        <button onClick={toggleMute} className="btn" style={{ background: isMuted ? 'var(--error)' : 'var(--bg-card)', color: isMuted ? '#fff' : 'var(--text)', borderRadius: '50%', width: 44, height: 44, padding: 0 }}>
+          {isMuted ? <MicOff size={20} /> : <Mic size={20} />}
         </button>
-        <button onClick={toggleVideo} className="btn" style={{ background: isVideoOff ? 'var(--error)' : 'var(--bg-card)', color: isVideoOff ? '#fff' : 'var(--text)', borderRadius: '50%', width: 40, height: 40, padding: 0 }}>
-          {isVideoOff ? <VideoOff size={18} /> : <Video size={18} />}
+        <button onClick={toggleVideo} className="btn" style={{ background: isVideoOff ? 'var(--error)' : 'var(--bg-card)', color: isVideoOff ? '#fff' : 'var(--text)', borderRadius: '50%', width: 44, height: 44, padding: 0 }}>
+          {isVideoOff ? <VideoOff size={20} /> : <Video size={20} />}
         </button>
-        <button onClick={() => window.location.href = '/dashboard'} className="btn btn-error" style={{ borderRadius: '50%', width: 40, height: 40, padding: 0 }}><PhoneOff size={18} /></button>
+        <button onClick={() => window.location.href = '/dashboard'} className="btn btn-error" style={{ borderRadius: '50%', width: 44, height: 44, padding: 0 }}><PhoneOff size={20} /></button>
       </div>
     </div>
   );
