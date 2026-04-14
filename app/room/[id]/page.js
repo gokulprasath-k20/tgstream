@@ -136,23 +136,20 @@ export default function Room() {
 
   return (
     <div className="container" style={{ paddingTop: '5rem', height: '100vh', display: 'flex', flexDirection: 'column' }}>
+      {/* Header Row */}
       <div className="flex justify-between items-center mb-4">
         <div className="flex items-center gap-4">
           <h1 style={{ fontSize: '1.5rem', fontWeight: 700 }}>
             Room: <span style={{ color: 'var(--primary)' }}>{roomId}</span>
           </h1>
-            <button 
-              onClick={() => { 
-                navigator.clipboard.writeText(roomId);
-                setCopied(true);
-                setTimeout(() => setCopied(false), 2000);
-              }}
-              className="btn btn-secondary flex items-center gap-2" 
-              style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}
-            >
-              {copied ? <CheckCircle size={14} style={{ color: 'var(--success)' }} /> : <Clipboard size={14} />}
-              {copied ? 'Copied' : 'Copy ID'}
-            </button>
+          <button 
+            onClick={copyRoomId}
+            className="btn btn-secondary flex items-center gap-2" 
+            style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}
+          >
+            {copied ? <CheckCircle size={14} style={{ color: 'var(--success)' }} /> : <Clipboard size={14} />}
+            {copied ? 'Copied' : 'Copy ID'}
+          </button>
         </div>
         
         <span className="flex items-center gap-2" style={{ color: 'var(--success)', fontSize: '0.8rem' }}>
@@ -161,8 +158,9 @@ export default function Room() {
         </span>
       </div>
 
+      {/* Main Grid View */}
       <div className="flex-1 grid-cols-layout" style={{ display: 'grid', gridTemplateColumns: '1fr 350px', gap: '1.5rem', minHeight: 0, paddingBottom: '2rem' }}>
-        {/* Main Video Area */}
+        {/* Left Side: Video Player */}
         <div className="flex flex-col gap-4 video-main" style={{ minHeight: 0 }}>
           <VideoPlayer 
             socket={socket} 
@@ -173,65 +171,66 @@ export default function Room() {
             remoteScreenStream={remoteScreenStream}
           />
         </div>
-        </div>
 
-        {/* 25% SIDE PANEL (Video Call + Chat) */}
+        {/* Right Side: Sidebar (Call/Chat/Users) */}
         <div className="sidebar-mobile" style={{ display: 'flex', flexDirection: 'column', background: 'rgba(0,0,0,0.2)', borderLeft: '1px solid var(--border)' }}>
-        <div className="flex" style={{ borderBottom: '1px solid var(--border)' }}>
-          {[
-            { id: 'call', icon: <Video size={18} />, label: 'Call' },
-            { id: 'chat', icon: <MessageSquare size={18} />, label: 'Chat' },
-            { id: 'users', icon: <Users size={18} />, label: `Users (${roomUsers.length + 1})` }
-          ].map(tab => (
-            <button 
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className="flex-1 p-3 flex flex-col items-center justify-center gap-1"
-              style={{ 
-                borderBottom: activeTab === tab.id ? '2px solid var(--primary)' : 'none',
-                background: activeTab === tab.id ? 'rgba(99, 102, 241, 0.05)' : 'none',
-                color: activeTab === tab.id ? 'var(--primary)' : 'var(--text-muted)',
-                fontSize: '0.75rem'
-              }}
-            >
-              {tab.icon}
-              <span>{tab.label}</span>
-            </button>
-          ))}
-        </div>
+          {/* Tab Selection */}
+          <div className="flex" style={{ borderBottom: '1px solid var(--border)' }}>
+            {[
+              { id: 'call', icon: <Video size={18} />, label: 'Call' },
+              { id: 'chat', icon: <MessageSquare size={18} />, label: 'Chat' },
+              { id: 'users', icon: <Users size={18} />, label: `Users (${roomUsers.length + 1})` }
+            ].map(tab => (
+              <button 
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className="flex-1 p-3 flex flex-col items-center justify-center gap-1"
+                style={{ 
+                  borderBottom: activeTab === tab.id ? '2px solid var(--primary)' : 'none',
+                  background: activeTab === tab.id ? 'rgba(99, 102, 241, 0.05)' : 'none',
+                  color: activeTab === tab.id ? 'var(--primary)' : 'var(--text-muted)',
+                  fontSize: '0.75rem'
+                }}
+              >
+                {tab.icon}
+                <span>{tab.label}</span>
+              </button>
+            ))}
+          </div>
 
-        <div style={{ flex: 1, padding: '1rem', overflow: 'hidden' }}>
-          {activeTab === 'call' && (
-            <VideoCall 
-              socket={socket} 
-              roomId={roomId} 
-              username={user.username} 
-              localScreenStream={localScreenStream}
-              onRemoteScreenStream={(stream) => setRemoteScreenStream(stream)}
-            />
-          )}
-          {activeTab === 'chat' && (
-            <Chat socket={socket} roomId={roomId} username={user.username} />
-          )}
-          {activeTab === 'users' && (
-            <div className="flex flex-col gap-3">
-              <div className="flex items-center gap-3 p-2 rounded-lg" style={{ background: 'rgba(99, 102, 241, 0.1)' }}>
-                <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  {user.username[0].toUpperCase()}
-                </div>
-                <span>{user.username} (You)</span>
-              </div>
-              {roomUsers.map(u => (
-                <div key={u.id} className="flex items-center gap-3 p-2">
-                  <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    {u.username[0].toUpperCase()}
+          {/* Tab Content */}
+          <div style={{ flex: 1, padding: '1rem', overflow: 'hidden' }}>
+            {activeTab === 'call' && (
+              <VideoCall 
+                socket={socket} 
+                roomId={roomId} 
+                username={user.username} 
+                localScreenStream={localScreenStream}
+                onRemoteScreenStream={(stream) => setRemoteScreenStream(stream)}
+              />
+            )}
+            {activeTab === 'chat' && (
+              <Chat socket={socket} roomId={roomId} username={user.username} />
+            )}
+            {activeTab === 'users' && (
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center gap-3 p-2 rounded-lg" style={{ background: 'rgba(99, 102, 241, 0.1)' }}>
+                  <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {user.username[0].toUpperCase()}
                   </div>
-                  <span>{u.username}</span>
+                  <span>{user.username} (You)</span>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
+                {roomUsers.map(u => (
+                  <div key={u.id} className="flex items-center gap-3 p-2">
+                    <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {u.username[0].toUpperCase()}
+                    </div>
+                    <span>{u.username}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
