@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff, Video, VideoOff, PhoneOff, User, MoreVertical } from 'lucide-react';
+import { Mic, MicOff, Video, VideoOff, PhoneOff } from 'lucide-react';
 
 export default function VideoCall({ socket, roomId, username, localScreenStream, onRemoteScreenStream }) {
   const [localStream, setLocalStream] = useState(null);
@@ -10,6 +10,7 @@ export default function VideoCall({ socket, roomId, username, localScreenStream,
   
   const localVideoRef = useRef();
   const pcsRef = useRef({}); // { socketId: RTCPeerConnection }
+  const screenSendersRef = useRef({}); // { socketId: [RTCRtpSender] }
 
   // 1. Initialize Local Camera
   useEffect(() => {
@@ -18,18 +19,13 @@ export default function VideoCall({ socket, roomId, username, localScreenStream,
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         setLocalStream(stream);
         if (localVideoRef.current) localVideoRef.current.srcObject = stream;
-
-        // CRITICAL: Signal to the room that we are ready for WebRTC
         socket.emit('ready-for-handshake');
       } catch (err) {
         console.error("Camera error:", err);
       }
     };
     init();
-
-    return () => {
-      if (localStream) localStream.getTracks().forEach(t => t.stop());
-    };
+    return () => { if (localStream) localStream.getTracks().forEach(t => t.stop()); };
   }, []);
 
   // 2. Peer Connection Factory
@@ -56,8 +52,15 @@ export default function VideoCall({ socket, roomId, username, localScreenStream,
 
     pcsRef.current[targetId] = pc;
 
+    // Add Video/Audio Tracks
     if (stream) {
       stream.getTracks().forEach(track => pc.addTrack(track, stream));
+    }
+
+    // Add Screen Share Tracks if active
+    if (localScreenStream) {
+      const senders = localScreenStream.getTracks().map(track => pc.addTrack(track, localScreenStream));
+      screenSendersRef.current[targetId] = senders;
     }
 
     pc.onicecandidate = (e) => {
@@ -68,6 +71,13 @@ export default function VideoCall({ socket, roomId, username, localScreenStream,
 
     pc.ontrack = (e) => {
       const remoteStream = e.streams[0];
+      
+      // If this is a secondary video track, it is likely a SCREEN SHARE
+      if (e.track.kind === 'video' && e.streams[0].getVideoTracks().length > 1) {
+        onRemoteScreenStream(new MediaStream([e.track]));
+        return;
+      }
+
       setRemoteStreams(prev => {
         if (prev.find(p => p.id === targetId)) return prev;
         return [...prev, { id: targetId, stream: remoteStream, username: targetName || 'User' }];
@@ -77,13 +87,11 @@ export default function VideoCall({ socket, roomId, username, localScreenStream,
     return pc;
   };
 
-  // 3. Signaling Handshake
+  // 3. Signaling & Screen Toggle
   useEffect(() => {
     if (!socket || !localStream) return;
 
-    // When a NEW user signals they are ready, we (the existing user) send an Offer
     socket.on('initiate-call', ({ id, username: name }) => {
-      console.log(`[WebRTC] Initiating call to: ${name}`);
       const pc = createPC(id, localStream, name);
       pc.createOffer().then(offer => {
         pc.setLocalDescription(offer);
@@ -107,118 +115,75 @@ export default function VideoCall({ socket, roomId, username, localScreenStream,
       }
     });
 
-    socket.on('user-left', ({ id }) => {
-      if (pcsRef.current[id]) {
-        pcsRef.current[id].close();
-        delete pcsRef.current[id];
-      }
-      setRemoteStreams(prev => prev.filter(p => p.id !== id));
-    });
-
     return () => {
       socket.off('initiate-call');
       socket.off('signal');
-      socket.off('user-left');
     };
-  }, [socket, localStream]);
+  }, [socket, localStream, localScreenStream]);
 
-  const toggleMute = () => {
-    localStream.getAudioTracks()[0].enabled = !isMuted;
-    setIsMuted(!isMuted);
-  };
+  // Handle LOCAL SCREEN SHARE changes (dynamic adding/removing)
+  useEffect(() => {
+    if (!localScreenStream) {
+      // Remove screen tracks from all PCs
+      Object.keys(screenSendersRef.current).forEach(id => {
+        const pc = pcsRef.current[id];
+        const senders = screenSendersRef.current[id];
+        if (pc && senders) {
+          senders.forEach(s => pc.removeTrack(s));
+          delete screenSendersRef.current[id];
+        }
+      });
+      return;
+    }
 
-  const toggleVideo = () => {
-    localStream.getVideoTracks()[0].enabled = !isVideoOff;
-    setIsVideoOff(!isVideoOff);
-  };
+    // Add screen tracks to all active PCs
+    Object.keys(pcsRef.current).forEach(id => {
+      const pc = pcsRef.current[id];
+      if (pc && !screenSendersRef.current[id]) {
+        const senders = localScreenStream.getTracks().map(track => pc.addTrack(track, localScreenStream));
+        screenSendersRef.current[id] = senders;
+        // Trigger re-negotiation
+        pc.createOffer().then(offer => {
+          pc.setLocalDescription(offer);
+          socket.emit('signal', { targetId: id, signal: offer });
+        });
+      }
+    });
+  }, [localScreenStream]);
+
+  const toggleMute = () => { localStream.getAudioTracks()[0].enabled = isMuted; setIsMuted(!isMuted); };
+  const toggleVideo = () => { localStream.getVideoTracks()[0].enabled = isVideoOff; setIsVideoOff(!isVideoOff); };
 
   return (
-    <div className="flex flex-col h-full gap-4" style={{ color: 'var(--text)' }}>
-      {/* Scrollable Video Area */}
+    <div className="flex flex-col h-full gap-4">
       <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-3">
-        {/* Self View */}
-        <div className="card" style={{ padding: 0, overflow: 'hidden', position: 'relative', border: '1px solid var(--border)', background: '#000' }}>
-          <video 
-            ref={localVideoRef} 
-            autoPlay 
-            muted 
-            playsInline 
-            className="w-full h-full" 
-            style={{ minHeight: '160px', objectFit: 'cover', transform: 'scaleX(-1)' }}
-          />
-          <div style={{ position: 'absolute', bottom: '8px', left: '8px', background: 'rgba(0,0,0,0.6)', color: '#fff', fontSize: '0.7rem', padding: '2px 8px', borderRadius: '4px' }}>
-            You {isMuted && ' (Muted)'}
-          </div>
+        {/* You */}
+        <div className="card" style={{ padding: 0, overflow: 'hidden', position: 'relative', background: '#000' }}>
+          <video ref={localVideoRef} autoPlay muted playsInline className="w-full" style={{ minHeight: '160px', objectFit: 'cover', transform: 'scaleX(-1)' }} />
+          <div style={{ position: 'absolute', bottom: '8px', left: '8px', background: 'rgba(0,0,0,0.6)', color: '#fff', fontSize: '0.7rem', padding: '2px 8px', borderRadius: '4px' }}>You {isMuted && '🔇'}</div>
         </div>
 
-        {/* Remote Views */}
+        {/* Friends */}
         {remoteStreams.map(peer => (
-          <div key={peer.id} className="card" style={{ padding: 0, overflow: 'hidden', position: 'relative', border: '1px solid var(--border)', background: '#000' }}>
-            <video 
-              autoPlay 
-              playsInline 
-              className="w-full h-full" 
-              style={{ minHeight: '160px', objectFit: 'cover' }}
-              ref={el => { if (el) el.srcObject = peer.stream; }}
-              onClick={(e) => e.target.play()}
-            />
+          <div key={peer.id} className="card" style={{ padding: 0, overflow: 'hidden', position: 'relative', background: '#000' }}>
+            <video autoPlay playsInline className="w-full" style={{ minHeight: '160px', objectFit: 'cover' }} ref={el => { if (el) el.srcObject = peer.stream; }} />
             <div style={{ position: 'absolute', bottom: '8px', left: '8px', background: 'rgba(0,0,0,0.6)', color: '#fff', fontSize: '0.7rem', padding: '2px 8px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
               {peer.username}
-              {process.env.NEXT_PUBLIC_TURN_USERNAME && <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e' }} />}
+              <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e' }} title="Secure Relay" />
             </div>
-            
-            {/* Fail-safe play trigger for mobile browser restrictions */}
-            <div 
-              onClick={(e) => e.currentTarget.parentElement.querySelector('video').play()}
-              style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.01)', cursor: 'pointer' }}
-            >
-              <span style={{ fontSize: '0.6rem', color: '#ccc', opacity: 0.5 }}>Tap to fix video</span>
-            </div>
+            <div onClick={(e) => e.currentTarget.parentElement.querySelector('video').play()} style={{ position: 'absolute', inset: 0, cursor: 'pointer' }} />
           </div>
         ))}
-
-        {remoteStreams.length === 0 && (
-          <div className="card text-center" style={{ padding: '2rem', borderStyle: 'dashed' }}>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Waiting for others to join call...</p>
-          </div>
-        )}
       </div>
 
-      {/* Basic Controls */}
-      <div className="flex justify-center items-center gap-3 p-3" style={{ background: 'var(--bg-secondary)', borderRadius: '12px', border: '1px solid var(--border)' }}>
-        <button 
-          onClick={toggleMute}
-          className="btn" 
-          style={{ 
-            background: isMuted ? 'var(--error)' : 'var(--bg)', 
-            color: isMuted ? '#fff' : 'var(--text)', 
-            border: '1px solid var(--border)',
-            padding: '10px',
-            borderRadius: '50%'
-          }}
-        >
+      <div className="flex justify-center items-center gap-3 p-3 bg-secondary rounded-xl border border-border mt-auto">
+        <button onClick={toggleMute} className="btn" style={{ background: isMuted ? 'var(--error)' : 'var(--bg-card)', color: isMuted ? '#fff' : 'var(--text)', borderRadius: '50%', width: 40, height: 40, padding: 0 }}>
           {isMuted ? <MicOff size={18} /> : <Mic size={18} />}
         </button>
-        <button 
-          onClick={toggleVideo}
-          className="btn"
-          style={{ 
-            background: isVideoOff ? 'var(--error)' : 'var(--bg)', 
-            color: isVideoOff ? '#fff' : 'var(--text)', 
-            border: '1px solid var(--border)',
-            padding: '10px',
-            borderRadius: '50%'
-          }}
-        >
+        <button onClick={toggleVideo} className="btn" style={{ background: isVideoOff ? 'var(--error)' : 'var(--bg-card)', color: isVideoOff ? '#fff' : 'var(--text)', borderRadius: '50%', width: 40, height: 40, padding: 0 }}>
           {isVideoOff ? <VideoOff size={18} /> : <Video size={18} />}
         </button>
-        <button 
-          onClick={() => window.location.href = '/dashboard'}
-          className="btn btn-error"
-          style={{ padding: '10px', borderRadius: '50%' }}
-        >
-          <PhoneOff size={18} />
-        </button>
+        <button onClick={() => window.location.href = '/dashboard'} className="btn btn-error" style={{ borderRadius: '50%', width: 40, height: 40, padding: 0 }}><PhoneOff size={18} /></button>
       </div>
     </div>
   );

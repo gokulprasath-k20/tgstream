@@ -48,10 +48,10 @@ export default function Navbar() {
       background: 'var(--bg-card)',
       borderBottom: '1px solid var(--border)'
     }}>
-      <div className="container flex justify-between items-center" style={{ padding: '0 2rem' }}>
-        <Link href="/" className="flex items-center gap-2" style={{ fontWeight: 800, fontSize: '1.25rem', color: 'var(--primary)', letterSpacing: '-0.02em' }}>
-          <MonitorPlay size={28} filter="none" />
-          <span>TGSTREAM</span>
+      <div className="container flex justify-between items-center" style={{ padding: '0 1rem' }}>
+        <Link href="/" className="flex items-center gap-1" style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--primary)', letterSpacing: '-0.02em' }}>
+          <MonitorPlay size={24} />
+          <span>TG</span>
         </Link>
 
         <div className="flex items-center gap-4">

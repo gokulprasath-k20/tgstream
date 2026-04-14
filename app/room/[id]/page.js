@@ -111,12 +111,12 @@ export default function Room() {
         </div>
       </div>
 
-      <div className="grid-cols-layout" style={{ display: 'grid', gridTemplateColumns: '1fr 350px', gap: '1.5rem' }}>
+      <div className="room-layout">
         <div className="flex flex-col gap-4">
           <VideoPlayer socket={socket} roomId={roomId} isHost={true} localScreenStream={localScreenStream} setLocalScreenStream={setLocalScreenStream} remoteScreenStream={remoteScreenStream} />
         </div>
 
-        <div className="sidebar-mobile flex flex-col" style={{ background: 'var(--bg-secondary)', borderRadius: '12px', border: '1px solid var(--border)', height: 'calc(100vh - 250px)', minHeight: '500px' }}>
+        <div className="sidebar-container">
           <div className="flex p-1 gap-1" style={{ borderBottom: '1px solid var(--border)' }}>
             {[
               { id: 'call', icon: <Video size={16} />, label: 'Call' },
