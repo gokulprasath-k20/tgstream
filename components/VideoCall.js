@@ -284,10 +284,16 @@ export default function VideoCall({ socket, roomId, username, localScreenStream,
               playsInline 
               className="w-full h-full" 
               style={{ objectFit: 'cover' }}
-              ref={el => { if (el) el.srcObject = peer.stream; }}
+              ref={el => { 
+                if (el) {
+                  el.srcObject = peer.stream;
+                  el.play().catch(e => console.log("Autoplay blocked:", e));
+                }
+              }}
             />
-            <div style={{ position: 'absolute', bottom: '10px', left: '10px', background: 'rgba(0,0,0,0.5)', padding: '2px 8px', borderRadius: '4px', fontSize: '0.8rem' }}>
+            <div style={{ position: 'absolute', bottom: '10px', left: '10px', background: 'rgba(0,0,0,0.5)', padding: '2px 8px', borderRadius: '4px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '5px' }}>
               {peer.username}
+              {process.env.NEXT_PUBLIC_TURN_USERNAME && <span title="Relay Active" style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981' }}></span>}
             </div>
           </div>
         ))}
