@@ -1,180 +1,152 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-
 :root {
-  --bg: #05060f;
-  --bg-secondary: #0f111a;
-  --bg-card: #161826;
-  --primary: #6366f1;
-  --primary-glow: rgba(99, 102, 241, 0.4);
-  --text: #f8fafc;
-  --text-muted: #94a3b8;
-  --border: rgba(255, 255, 255, 0.08);
-  --error: #f43f5e;
+  /* Zoom Light Theme */
+  --bg: #ffffff;
+  --bg-sidebar: #f7f9fa;
+  --bg-secondary: #f0f2f4;
+  --text: #131619;
+  --text-muted: #6e7680;
+  --border: #d2d8db;
+  --primary: #0b5fff; /* Zoom Blue */
+  --action-orange: #ff742e; /* Zoom Orange */
+  --action-blue: #0b5fff;
+  --action-grey: #6e7680;
+}
+
+.dark {
+  /* Zoom Dark Theme */
+  --bg: #101010;
+  --bg-sidebar: #1a1a1a;
+  --bg-secondary: #242424;
+  --text: #ffffff;
+  --text-muted: #a1a1a1;
+  --border: #333333;
 }
 
 * {
   box-sizing: border-box;
   padding: 0;
   margin: 0;
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: 'Inter', -apple-system, sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 body {
   background-color: var(--bg);
   color: var(--text);
-  min-height: 100vh;
-  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+  height: 100vh;
 }
 
-/* 1. Global Components (The "WOW" Factors) */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 12px 24px;
-  border-radius: 14px;
-  font-weight: 700;
-  font-size: 0.95rem;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  cursor: pointer;
-  border: 1px solid transparent;
-}
-
-.btn-primary {
-  background: var(--primary);
-  color: white;
-  box-shadow: 0 4px 15px var(--primary-glow);
-}
-
-.btn-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px var(--primary-glow);
-  background: #4f46e5;
-}
-
-.btn-secondary {
-  background: var(--bg-card);
-  color: white;
-  border-color: var(--border);
-}
-
-.btn-secondary:hover {
-  background: #1e2133;
-}
-
-.input {
-  width: 100%;
-  padding: 14px 18px;
-  background: var(--bg-secondary);
-  border: 2px solid var(--border);
-  border-radius: 14px;
-  color: white;
-  font-size: 0.95rem;
-  outline: none;
-  transition: all 0.2s;
-}
-
-.input:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 4px var(--primary-glow);
-}
-
-.card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 24px;
-  padding: 2rem;
-  box-shadow: 0 20px 40px rgba(0,0,0,0.4);
-}
-
-/* 2. Room Layout Architecture (Clean & Organized) */
-.theme-container {
+/* Master Zoom Layout */
+.zoom-layout {
   display: flex;
-  flex-direction: column;
   height: 100vh;
   width: 100vw;
 }
 
-.main-wrapper {
-  flex: 1;
-  display: flex;
-  overflow: hidden;
-  padding: 16px;
-  gap: 16px;
-}
-
-.media-stage {
-  flex: 1;
+/* 1. Zoom Sidebar (Left) */
+.zoom-sidebar {
+  width: 72px;
+  background: var(--bg-sidebar);
+  border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  background: #000;
-  border-radius: 24px;
-  overflow: hidden;
-  position: relative;
-  border: 1px solid var(--border);
-}
-
-.participant-strip {
-  width: 280px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  overflow-y: auto;
-}
-
-.participant-tile {
-  background: #000;
-  border-radius: 16px;
-  aspect-ratio: 16/9;
-  position: relative;
-  overflow: hidden;
-  border: 2px solid transparent;
-  transition: all 0.3s;
-}
-
-.participant-tile:hover {
-  border-color: var(--primary);
-  transform: scale(1.02);
-}
-
-/* 3. Bottom Bar (Modern Pill style) */
-.bottom-bar {
-  height: 90px;
-  display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 32px;
-  background: var(--bg);
+  padding-top: 20px;
+  gap: 20px;
 }
 
-.circle-btn-pill {
-  width: 52px;
-  height: 52px;
-  border-radius: 18px;
+.sidebar-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  color: white;
+  cursor: pointer;
+  color: var(--text-muted);
   transition: all 0.2s;
 }
 
-.circle-btn-pill:hover {
-  background: #25283a;
-  transform: translateY(-2px);
+.sidebar-icon:hover, .sidebar-icon.active {
+  background: var(--bg-secondary);
+  color: var(--primary);
 }
 
-.circle-btn-pill.danger {
-  background: var(--error);
-  border: none;
+/* 2. Dashboard Grid */
+.zoom-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 40px;
+  overflow-y: auto;
 }
 
-/* 4. Auth & Landing Styles */
-.title-gradient {
-  background: linear-gradient(to right, #6366f1, #a855f7);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  font-weight: 800;
+.action-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 160px);
+  gap: 40px;
+  margin-top: 50px;
+}
+
+.action-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.action-card:hover {
+  transform: translateY(-5px);
+}
+
+.action-icon-box {
+  width: 120px;
+  height: 120px;
+  border-radius: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+}
+
+.action-card span {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+/* 3. The Theme Toggle Switch */
+.theme-toggle-container {
+  position: fixed;
+  bottom: 20px;
+  left: 12px;
+  z-index: 100;
+}
+
+.toggle-pill {
+  width: 48px;
+  height: 24px;
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  position: relative;
+  cursor: pointer;
+  border: 1px solid var(--border);
+}
+
+.toggle-circle {
+  width: 18px;
+  height: 18px;
+  background: var(--primary);
+  border-radius: 50%;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  transition: transform 0.3s;
+}
+
+.dark .toggle-circle {
+  transform: translateX(24px);
 }
