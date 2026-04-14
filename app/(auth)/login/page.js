@@ -1,111 +1,72 @@
 'use client';
-import { useState, useEffect, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { LogIn, Mail, Lock, Loader2 } from 'lucide-react';
+import { MonitorPlay, Mail, Lock, ArrowRight, Zap } from 'lucide-react';
 
-function LoginForm() {
-  const [formData, setFormData] = useState({ email: '', password: '' });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [msg, setMsg] = useState('');
+export default function Login() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const router = useRouter();
-  const searchParams = useSearchParams();
 
-  useEffect(() => {
-    const m = searchParams.get('message');
-    if (m) setMsg(m);
-  }, [searchParams]);
-
-  const handleSubmit = async (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    setLoading(true);
-    setError('');
-    setMsg('');
-
-    try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
-
-      const data = await res.json();
-      if (res.ok) {
-        window.location.href = '/dashboard'; 
-      } else {
-        setError(data.error || 'Invalid credentials');
-      }
-    } catch (err) {
-      setError('Connection error');
-    } finally {
-      setLoading(false);
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    if (res.ok) {
+      router.push('/dashboard');
+      router.refresh();
+    } else {
+      alert('Invalid credentials');
     }
   };
 
   return (
-    <div className="container flex justify-center items-center" style={{ minHeight: '80vh' }}>
-      <div className="card animate-fade-in" style={{ width: '100%', maxWidth: '400px' }}>
-        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <LogIn size={48} style={{ color: 'var(--primary)', marginBottom: '1rem' }} />
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 600 }}>Welcome Back</h2>
-          <p style={{ color: 'var(--text-muted)' }}>Login to your dashboard</p>
+    <div className="min-h-screen bg-[#05060f] flex items-center justify-center p-6 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-indigo-900/20 via-transparent to-transparent">
+      <div className="w-full max-w-[440px] animate-slide-up">
+        
+        <div className="text-center mb-10">
+          <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-indigo-600/40">
+            <MonitorPlay size={32} className="text-white" />
+          </div>
+          <h1 className="text-3xl font-extrabold mb-2 tracking-tight">Welcome Back</h1>
+          <p className="text-gray-400 font-medium">Log in to your TGStream dashboard</p>
         </div>
 
-        {msg && <p style={{ color: 'var(--success)', fontSize: '0.875rem', marginBottom: '1rem', textAlign: 'center' }}>{msg}</p>}
-
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1">
-            <label style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Email</label>
-            <div style={{ position: 'relative' }}>
-              <Mail size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-              <input
-                type="email"
-                className="input"
-                style={{ paddingLeft: '2.5rem' }}
-                placeholder="john@example.com"
-                required
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              />
+        <div className="card">
+          <form onSubmit={handleLogin} className="space-y-5">
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2 ml-1">Email Address</label>
+              <div className="relative">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                <input type="email" className="input pl-12" placeholder="john@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
+              </div>
             </div>
-          </div>
 
-          <div className="flex flex-col gap-1">
-            <label style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Password</label>
-            <div style={{ position: 'relative' }}>
-              <Lock size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-              <input
-                type="password"
-                className="input"
-                style={{ paddingLeft: '2.5rem' }}
-                placeholder="••••••••"
-                required
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              />
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2 ml-1">Password</label>
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                <input type="password" className="input pl-12" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required />
+              </div>
             </div>
+
+            <button type="submit" className="btn btn-primary w-full py-4 text-lg mt-2">
+              Sign In
+              <ArrowRight size={20} />
+            </button>
+          </form>
+
+          <div className="mt-8 text-center border-t border-white/5 pt-8">
+            <p className="text-gray-400 text-sm">
+              Don't have an account? <Link href="/signup" className="text-indigo-400 font-bold hover:text-indigo-300">Create one for free</Link>
+            </p>
           </div>
-
-          {error && <p style={{ color: 'var(--error)', fontSize: '0.875rem' }}>{error}</p>}
-
-          <button type="submit" className="btn btn-primary w-full" disabled={loading}>
-            {loading ? <Loader2 className="animate-spin" size={20} /> : 'Login'}
-          </button>
-        </form>
-
-        <p style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-          Don't have an account? <Link href="/signup" style={{ color: 'var(--primary)' }}>Sign Up</Link>
-        </p>
+        </div>
       </div>
     </div>
-  );
-}
-
-export default function Login() {
-  return (
-    <Suspense fallback={<div className="container flex justify-center items-center h-screen">Loading...</div>}>
-      <LoginForm />
-    </Suspense>
   );
 }
