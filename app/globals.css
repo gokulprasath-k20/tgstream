@@ -1,29 +1,94 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
 :root {
-  --bg-deep: #0e0f14;
-  --bg-panel: #1e1f24;
-  --bg-card: #28292e;
-  --primary: #8ab4f8;
-  --error: #ea4335;
-  --text: #ffffff;
-  --text-muted: #bdc1c6;
-  --border: #3c4043;
+  --bg: #05060f;
+  --bg-secondary: #0f111a;
+  --bg-card: #161826;
+  --primary: #6366f1;
+  --primary-glow: rgba(99, 102, 241, 0.4);
+  --text: #f8fafc;
+  --text-muted: #94a3b8;
+  --border: rgba(255, 255, 255, 0.08);
+  --error: #f43f5e;
 }
 
 * {
   box-sizing: border-box;
   padding: 0;
   margin: 0;
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
 }
 
 body {
-  background-color: var(--bg-deep);
+  background-color: var(--bg);
   color: var(--text);
-  overflow: hidden;
-  height: 100vh;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Master Layout Framework */
+/* 1. Global Components (The "WOW" Factors) */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border-radius: 14px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: white;
+  box-shadow: 0 4px 15px var(--primary-glow);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px var(--primary-glow);
+  background: #4f46e5;
+}
+
+.btn-secondary {
+  background: var(--bg-card);
+  color: white;
+  border-color: var(--border);
+}
+
+.btn-secondary:hover {
+  background: #1e2133;
+}
+
+.input {
+  width: 100%;
+  padding: 14px 18px;
+  background: var(--bg-secondary);
+  border: 2px solid var(--border);
+  border-radius: 14px;
+  color: white;
+  font-size: 0.95rem;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px var(--primary-glow);
+}
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 2rem;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+}
+
+/* 2. Room Layout Architecture (Clean & Organized) */
 .theme-container {
   display: flex;
   flex-direction: column;
@@ -31,126 +96,85 @@ body {
   width: 100vw;
 }
 
-/* 1. Main Content Wrapper */
 .main-wrapper {
   flex: 1;
   display: flex;
   overflow: hidden;
-  padding: 12px;
-  gap: 12px;
+  padding: 16px;
+  gap: 16px;
 }
 
-/* 2. Primary Media Area (The Stage) */
 .media-stage {
   flex: 1;
   display: flex;
   flex-direction: column;
   background: #000;
-  border-radius: 16px;
+  border-radius: 24px;
   overflow: hidden;
   position: relative;
-  min-width: 0; /* Prevents flex overflow */
+  border: 1px solid var(--border);
 }
 
-/* 3. The Participant Strip (Google Meet style) */
 .participant-strip {
-  width: 250px;
+  width: 280px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   overflow-y: auto;
-  transition: all 0.3s ease;
 }
 
 .participant-tile {
-  background: var(--bg-card);
-  border-radius: 12px;
+  background: #000;
+  border-radius: 16px;
   aspect-ratio: 16/9;
   position: relative;
   overflow: hidden;
-  flex-shrink: 0;
-  border: 1px solid var(--border);
+  border: 2px solid transparent;
+  transition: all 0.3s;
 }
 
-.tile-overlay {
-  position: absolute;
-  bottom: 8px;
-  left: 8px;
-  background: rgba(0,0,0,0.6);
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 500;
+.participant-tile:hover {
+  border-color: var(--primary);
+  transform: scale(1.02);
 }
 
-/* 4. Side Panels (Chat/Info) */
-.side-panel {
-  width: 360px;
-  background: var(--bg-panel);
-  border-radius: 16px;
-  display: flex;
-  flex-direction: column;
-  border: 1px solid var(--border);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* 5. GMeet Style Bottom Bar */
+/* 3. Bottom Bar (Modern Pill style) */
 .bottom-bar {
-  height: 80px;
+  height: 90px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 24px;
+  padding: 0 32px;
+  background: var(--bg);
 }
 
-.bar-center {
-  display: flex;
-  gap: 12px;
-}
-
-.circle-btn {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
+.circle-btn-pill {
+  width: 52px;
+  height: 52px;
+  border-radius: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--bg-panel);
-  border: 1px solid var(--border);
-  cursor: pointer;
-  transition: 0.2s;
-  color: #fff;
-}
-
-.circle-btn:hover {
   background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: white;
+  transition: all 0.2s;
 }
 
-.circle-btn.danger {
+.circle-btn-pill:hover {
+  background: #25283a;
+  transform: translateY(-2px);
+}
+
+.circle-btn-pill.danger {
   background: var(--error);
   border: none;
-  width: 60px;
 }
 
-/* Utilities */
-.hidden { display: none; }
-
-@media (max-width: 1024px) {
-  .main-wrapper {
-    flex-direction: column;
-  }
-  .participant-strip {
-    width: 100%;
-    height: 120px;
-    flex-direction: row;
-    overflow-x: auto;
-  }
-  .side-panel {
-    position: fixed;
-    top: 10px;
-    right: 10px;
-    bottom: 90px;
-    z-index: 1000;
-    width: calc(100% - 20px);
-  }
+/* 4. Auth & Landing Styles */
+.title-gradient {
+  background: linear-gradient(to right, #6366f1, #a855f7);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: 800;
 }

@@ -1,84 +1,49 @@
 'use client';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { LogOut, MonitorPlay, Sun, Moon } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { MonitorPlay, LogOut, User } from 'lucide-react';
 
-export default function Navbar() {
-  const [user, setUser] = useState(null);
+export default function Navbar({ user }) {
   const router = useRouter();
-
-  useEffect(() => {
-    fetch('/api/auth/me')
-      .then(res => res.json())
-      .then(data => {
-        if (data.user) setUser(data.user);
-      })
-      .catch(() => setUser(null));
-  }, []);
-
-  const [theme, setTheme] = useState('light');
-
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('theme') || 'light';
-    setTheme(savedTheme);
-    document.documentElement.className = savedTheme;
-  }, []);
-
-  const toggleTheme = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light';
-    setTheme(newTheme);
-    document.documentElement.className = newTheme;
-    localStorage.setItem('theme', newTheme);
-  };
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
-    setUser(null);
     router.push('/login');
+    router.refresh();
   };
 
   return (
-    <nav style={{
-      position: 'fixed',
-      top: 0,
-      width: '100%',
-      zIndex: 1000,
-      padding: '0.75rem 0',
-      background: 'var(--bg-card)',
-      borderBottom: '1px solid var(--border)'
-    }}>
-      <div className="container flex justify-between items-center" style={{ padding: '0 1rem' }}>
-        <Link href="/" className="flex items-center gap-1" style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--primary)', letterSpacing: '-0.02em' }}>
-          <MonitorPlay size={24} />
-          <span>TG</span>
+    <nav className="h-[70px] border-b border-white/5 bg-transparent flex items-center px-8 z-50">
+      <div className="container max-w-7xl mx-auto flex justify-between items-center w-full">
+        <Link href="/" className="flex items-center gap-2 group">
+          <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-600/20 group-hover:scale-105 transition-transform">
+            <MonitorPlay size={24} className="text-white" />
+          </div>
+          <span className="text-xl font-extrabold tracking-tighter title-gradient">TGSTREAM</span>
         </Link>
 
-        <div className="flex items-center gap-4">
-          <button 
-            onClick={toggleTheme} 
-            className="btn btn-secondary" 
-            style={{ width: '40px', height: '40px', padding: 0, borderRadius: '50%' }}
-            aria-label="Toggle Theme"
-          >
-            {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
-          </button>
-
+        <div className="flex items-center gap-6">
           {user ? (
-            <>
-              <Link href="/dashboard" style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: 500 }}>Dashboard</Link>
-              <div className="flex items-center gap-3" style={{ borderLeft: '1px solid var(--border)', paddingLeft: '1rem' }}>
-                <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>{user.username}</span>
-                <button onClick={handleLogout} className="btn btn-secondary" style={{ padding: '0.5rem' }}>
-                  <LogOut size={16} />
-                </button>
+            <div className="flex items-center gap-4">
+              <div className="hidden sm:flex items-center gap-2 bg-white/5 py-1.5 px-3 rounded-full border border-white/10">
+                <div className="w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center text-[10px] font-bold">
+                  {user.username[0]}
+                </div>
+                <span className="text-xs font-semibold text-gray-300">{user.username}</span>
               </div>
-            </>
+              <button 
+                onClick={handleLogout}
+                className="btn btn-secondary py-2 px-4 text-xs h-10 border-red-500/20 text-red-400 hover:bg-red-500 hover:text-white"
+              >
+                <LogOut size={16} />
+                <span>Logout</span>
+              </button>
+            </div>
           ) : (
-            <>
-              <Link href="/login" style={{ fontSize: '0.9rem', fontWeight: 500 }}>Login</Link>
-              <Link href="/signup" className="btn btn-primary" style={{ padding: '0.5rem 1rem', fontSize: '0.9rem' }}>Get Started</Link>
-            </>
+            <div className="flex items-center gap-3">
+              <Link href="/login" className="text-sm font-bold text-gray-400 hover:text-white transition-colors">Sign In</Link>
+              <Link href="/signup" className="btn btn-primary py-2 px-5 h-10 text-xs">Get Started</Link>
+            </div>
           )}
         </div>
       </div>
