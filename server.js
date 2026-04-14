@@ -7,7 +7,7 @@ const httpServer = http.createServer();
 
 const io = new Server(httpServer, {
   cors: {
-    origin: "*", // Allows any domain to connect
+    origin: "*", 
     methods: ["GET", "POST"],
     credentials: true
   },
@@ -33,11 +33,15 @@ io.on("connection", (socket) => {
 
     console.log(`[Room ${roomId}] ${username} (${socket.id}) joined. Total users: ${room.users.length}`);
 
-    // Notify others
+    // Notify others that a user is in the room
     socket.to(roomId).emit("user-joined", { id: socket.id, username });
-    
-    // Send list of existing users to the new user
     socket.emit("existing-users", room.users.filter(u => u.id !== socket.id));
+
+    // Special event to trigger handshake once camera is ready
+    socket.on("ready-for-handshake", () => {
+      console.log(`[Handshake] ${username} is ready for signals.`);
+      socket.to(roomId).emit("initiate-call", { id: socket.id, username });
+    });
   });
 
   socket.on("send-message", ({ roomId, message, username, timestamp }) => {
@@ -45,32 +49,18 @@ io.on("connection", (socket) => {
     io.to(roomId).emit("receive-message", { message, username, timestamp });
   });
 
-  // WebRTC Signaling
-  socket.on("signal", ({ roomId, targetId, signal }) => {
+  socket.on("signal", ({ targetId, signal }) => {
     io.to(targetId).emit("signal", { senderId: socket.id, signal });
   });
 
-  // Screen Share Status
-  socket.on("screen-share-status", ({ roomId, isSharing, username }) => {
-    socket.to(roomId).emit("screen-share-changed", { isSharing, username, sharerId: socket.id });
-  });
-
-  // Sync Movie Playback (Optional but good)
-  socket.on("sync-video", ({ roomId, action, time }) => {
-    socket.to(roomId).emit("video-sync", { action, time });
-  });
-
   socket.on("disconnect", () => {
-    console.log("User disconnected:", socket.id);
     rooms.forEach((room, roomId) => {
       const userIndex = room.users.findIndex(u => u.id === socket.id);
       if (userIndex !== -1) {
         const username = room.users[userIndex].username;
         room.users.splice(userIndex, 1);
         io.to(roomId).emit("user-left", { id: socket.id, username });
-        if (room.users.length === 0) {
-          rooms.delete(roomId);
-        }
+        if (room.users.length === 0) rooms.delete(roomId);
       }
     });
   });

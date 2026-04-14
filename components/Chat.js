@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
-import { Send, User } from 'lucide-react';
+import { Send } from 'lucide-react';
 
 export default function Chat({ socket, roomId, username }) {
   const [message, setMessage] = useState('');
@@ -46,70 +46,53 @@ export default function Chat({ socket, roomId, username }) {
         timestamp
       };
 
-      // Real-time
       socket.emit('send-message', msgData);
 
-      // Persistence
       try {
         await fetch('/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ roomId, message: message.trim(), timestamp }),
         });
-      } catch (err) {
-        console.error('Failed to save message');
-      }
+      } catch (err) {}
 
       setMessage('');
     }
   };
 
   return (
-    <div className="flex flex-col h-full glass" style={{ borderRadius: '1rem', overflow: 'hidden' }}>
-      <div style={{ padding: '1rem', borderBottom: '1px solid var(--border)', background: 'rgba(255,255,255,0.05)' }}>
-        <h3 style={{ fontSize: '1rem', fontWeight: 600 }}>Live Chat</h3>
+    <div className="flex flex-col h-full bg-card" style={{ borderRadius: '12px', border: '1px solid var(--border)', overflow: 'hidden' }}>
+      <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--border)', background: 'var(--bg-secondary)' }}>
+        <h3 style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Group Chat</h3>
       </div>
       
-      <div style={{ flex: 1, overflowY: 'auto', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
         {messages.map((msg, i) => (
           <div key={i} style={{ 
             alignSelf: msg.username === username ? 'flex-end' : 'flex-start',
-            maxWidth: '80%'
+            maxWidth: '85%'
           }}>
-            <div style={{ 
-              display: 'flex', 
-              flexDirection: 'column', 
-              alignItems: msg.username === username ? 'flex-end' : 'flex-start' 
-            }}>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
-                {msg.username} • {msg.timestamp}
-              </span>
-              <div style={{ 
-                padding: '0.6rem 1rem', 
-                borderRadius: msg.username === username ? '1rem 0 1rem 1rem' : '0 1rem 1rem 1rem',
-                background: msg.username === username ? 'var(--primary)' : 'var(--secondary)',
-                fontSize: '0.9rem',
-                lineHeight: '1.4'
-              }}>
-                {msg.message}
-              </div>
+            <div style={{ padding: '0.5rem 0.75rem', borderRadius: '12px', background: msg.username === username ? 'var(--primary)' : 'var(--bg-secondary)', color: msg.username === username ? '#fff' : 'var(--text)', border: '1px solid var(--border)' }}>
+              <div style={{ fontSize: '0.65rem', fontWeight: 700, opacity: 0.7, marginBottom: '2px' }}>{msg.username}</div>
+              <div style={{ fontSize: '0.85rem' }}>{msg.message}</div>
+              <div style={{ fontSize: '0.6rem', textAlign: 'right', marginTop: '2px', opacity: 0.6 }}>{msg.timestamp}</div>
             </div>
           </div>
         ))}
         <div ref={chatEndRef} />
       </div>
 
-      <form onSubmit={handleSend} style={{ padding: '1rem', borderTop: '1px solid var(--border)', display: 'flex', gap: '0.5rem' }}>
+      <form onSubmit={handleSend} style={{ padding: '1rem', display: 'flex', gap: '0.5rem' }}>
         <input
           type="text"
           className="input"
-          style={{ padding: '0.5rem 1rem' }}
+          style={{ padding: '0.5rem 0.75rem', fontSize: '0.85rem' }}
           placeholder="Type a message..."
           value={message}
           onChange={(e) => setMessage(e.target.value)}
         />
-        <button type="submit" className="btn btn-primary" style={{ padding: '0.5rem' }}>
-          <Send size={20} />
+        <button type="submit" className="btn btn-primary" style={{ padding: '0.5rem 0.75rem' }}>
+          <Send size={16} />
         </button>
       </form>
     </div>

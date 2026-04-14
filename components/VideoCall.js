@@ -1,17 +1,15 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff, Video, VideoOff, PhoneOff, Monitor, MoreVertical } from 'lucide-react';
+import { Mic, MicOff, Video, VideoOff, PhoneOff, User, MoreVertical } from 'lucide-react';
 
 export default function VideoCall({ socket, roomId, username, localScreenStream, onRemoteScreenStream }) {
   const [localStream, setLocalStream] = useState(null);
   const [remoteStreams, setRemoteStreams] = useState([]);
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
-  const [speakingStatus, setSpeakingStatus] = useState({});
-
+  
   const localVideoRef = useRef();
   const pcsRef = useRef({}); // { socketId: RTCPeerConnection }
-  const analysersRef = useRef({});
 
   // 1. Initialize Local Camera
   useEffect(() => {
@@ -21,8 +19,8 @@ export default function VideoCall({ socket, roomId, username, localScreenStream,
         setLocalStream(stream);
         if (localVideoRef.current) localVideoRef.current.srcObject = stream;
 
-        // Tell the server we are ready for calls
-        socket.emit('ready-for-calls', { roomId });
+        // CRITICAL: Signal to the room that we are ready for WebRTC
+        socket.emit('ready-for-handshake');
       } catch (err) {
         console.error("Camera error:", err);
       }
@@ -58,19 +56,16 @@ export default function VideoCall({ socket, roomId, username, localScreenStream,
 
     pcsRef.current[targetId] = pc;
 
-    // Add local tracks
     if (stream) {
       stream.getTracks().forEach(track => pc.addTrack(track, stream));
     }
 
-    // Handle ICE
     pc.onicecandidate = (e) => {
       if (e.candidate) {
-        socket.emit('signal', { roomId, targetId, signal: e.candidate });
+        socket.emit('signal', { targetId, signal: e.candidate });
       }
     };
 
-    // Handle Tracks
     pc.ontrack = (e) => {
       const remoteStream = e.streams[0];
       setRemoteStreams(prev => {
@@ -86,12 +81,13 @@ export default function VideoCall({ socket, roomId, username, localScreenStream,
   useEffect(() => {
     if (!socket || !localStream) return;
 
-    socket.on('user-joined', ({ id, username: name }) => {
-      console.log("User joined, sending offer to:", name);
+    // When a NEW user signals they are ready, we (the existing user) send an Offer
+    socket.on('initiate-call', ({ id, username: name }) => {
+      console.log(`[WebRTC] Initiating call to: ${name}`);
       const pc = createPC(id, localStream, name);
       pc.createOffer().then(offer => {
         pc.setLocalDescription(offer);
-        socket.emit('signal', { roomId, targetId: id, signal: offer });
+        socket.emit('signal', { targetId: id, signal: offer });
       });
     });
 
@@ -103,11 +99,11 @@ export default function VideoCall({ socket, roomId, username, localScreenStream,
         await pc.setRemoteDescription(new RTCSessionDescription(signal));
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
-        socket.emit('signal', { roomId, targetId: senderId, signal: answer });
+        socket.emit('signal', { targetId: senderId, signal: answer });
       } else if (signal.type === 'answer') {
         await pc.setRemoteDescription(new RTCSessionDescription(signal));
       } else if (signal.candidate) {
-        await pc.addIceCandidate(new RTCIceCandidate(signal.candidate)).catch(e => {});
+        await pc.addIceCandidate(new RTCIceCandidate(signal.candidate)).catch(() => {});
       }
     });
 
@@ -120,113 +116,110 @@ export default function VideoCall({ socket, roomId, username, localScreenStream,
     });
 
     return () => {
-      socket.off('user-joined');
+      socket.off('initiate-call');
       socket.off('signal');
       socket.off('user-left');
     };
   }, [socket, localStream]);
 
   const toggleMute = () => {
-    localStream.getAudioTracks()[0].enabled = isMuted;
+    localStream.getAudioTracks()[0].enabled = !isMuted;
     setIsMuted(!isMuted);
   };
 
   const toggleVideo = () => {
-    localStream.getVideoTracks()[0].enabled = isVideoOff;
+    localStream.getVideoTracks()[0].enabled = !isVideoOff;
     setIsVideoOff(!isVideoOff);
   };
 
   return (
-    <div className="flex flex-col h-full gap-4">
-      {/* Scrollable Video Grid */}
-      <div className="flex-1 overflow-y-auto pr-2 flex flex-col gap-4 custom-scrollbar">
-        {/* Local Preview */}
-        <div className="relative rounded-2xl overflow-hidden bg-black aspect-video border-2 border-transparent">
+    <div className="flex flex-col h-full gap-4" style={{ color: 'var(--text)' }}>
+      {/* Scrollable Video Area */}
+      <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-3">
+        {/* Self View */}
+        <div className="card" style={{ padding: 0, overflow: 'hidden', position: 'relative', border: '1px solid var(--border)', background: '#000' }}>
           <video 
             ref={localVideoRef} 
             autoPlay 
             muted 
             playsInline 
-            className="w-full h-full object-cover" 
-            style={{ transform: 'scaleX(-1)' }}
+            className="w-full h-full" 
+            style={{ minHeight: '160px', objectFit: 'cover', transform: 'scaleX(-1)' }}
           />
-          <div className="absolute bottom-3 left-3 bg-black/60 px-3 py-1 rounded-full text-xs font-medium">
-            You {isMuted && '🔇'}
+          <div style={{ position: 'absolute', bottom: '8px', left: '8px', background: 'rgba(0,0,0,0.6)', color: '#fff', fontSize: '0.7rem', padding: '2px 8px', borderRadius: '4px' }}>
+            You {isMuted && ' (Muted)'}
           </div>
         </div>
 
-        {/* Remote Peers */}
+        {/* Remote Views */}
         {remoteStreams.map(peer => (
-          <div key={peer.id} className="relative rounded-2xl overflow-hidden bg-black aspect-video border-2 border-transparent">
+          <div key={peer.id} className="card" style={{ padding: 0, overflow: 'hidden', position: 'relative', border: '1px solid var(--border)', background: '#000' }}>
             <video 
               autoPlay 
               playsInline 
-              className="w-full h-full object-cover"
+              className="w-full h-full" 
+              style={{ minHeight: '160px', objectFit: 'cover' }}
               ref={el => { if (el) el.srcObject = peer.stream; }}
               onClick={(e) => e.target.play()}
             />
-            {/* Fallback Overlay */}
-            <div 
-              className="absolute inset-0 flex items-center justify-center cursor-pointer bg-black/5 pointer-events-none"
-              onClick={(e) => {
-                const v = e.currentTarget.parentElement.querySelector('video');
-                if (v) v.play();
-              }}
-            >
-              <div className="bg-white/10 backdrop-blur-md px-4 py-2 rounded-xl text-[10px] pointer-events-auto hover:bg-white/20 transition-all">
-                Trouble seeing? Tap to play
-              </div>
+            <div style={{ position: 'absolute', bottom: '8px', left: '8px', background: 'rgba(0,0,0,0.6)', color: '#fff', fontSize: '0.7rem', padding: '2px 8px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              {peer.username}
+              {process.env.NEXT_PUBLIC_TURN_USERNAME && <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e' }} />}
             </div>
             
-            <div className="absolute bottom-3 left-3 bg-black/60 px-3 py-1 rounded-full text-xs font-medium flex items-center gap-2">
-              {peer.username}
-              {process.env.NEXT_PUBLIC_TURN_USERNAME && <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" title="Relay Active" />}
+            {/* Fail-safe play trigger for mobile browser restrictions */}
+            <div 
+              onClick={(e) => e.currentTarget.parentElement.querySelector('video').play()}
+              style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.01)', cursor: 'pointer' }}
+            >
+              <span style={{ fontSize: '0.6rem', color: '#ccc', opacity: 0.5 }}>Tap to fix video</span>
             </div>
           </div>
         ))}
 
         {remoteStreams.length === 0 && (
-          <div className="flex-1 flex flex-col items-center justify-center text-center p-8 border-2 border-dashed border-white/10 rounded-2xl">
-            <div className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center mb-3">
-              <MoreVertical className="text-white/20" />
-            </div>
-            <p className="text-white/40 text-xs">Waiting for others to join...</p>
+          <div className="card text-center" style={{ padding: '2rem', borderStyle: 'dashed' }}>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Waiting for others to join call...</p>
           </div>
         )}
       </div>
 
-      {/* Control Bar */}
-      <div className="glass-morphism p-3 rounded-2xl flex justify-center items-center gap-4">
+      {/* Basic Controls */}
+      <div className="flex justify-center items-center gap-3 p-3" style={{ background: 'var(--bg-secondary)', borderRadius: '12px', border: '1px solid var(--border)' }}>
         <button 
           onClick={toggleMute}
-          className={`p-3 rounded-xl transition-all ${isMuted ? 'bg-red-500/20 text-red-500' : 'bg-white/5 text-white hover:bg-white/10'}`}
+          className="btn" 
+          style={{ 
+            background: isMuted ? 'var(--error)' : 'var(--bg)', 
+            color: isMuted ? '#fff' : 'var(--text)', 
+            border: '1px solid var(--border)',
+            padding: '10px',
+            borderRadius: '50%'
+          }}
         >
-          {isMuted ? <MicOff size={20} /> : <Mic size={20} />}
+          {isMuted ? <MicOff size={18} /> : <Mic size={18} />}
         </button>
         <button 
           onClick={toggleVideo}
-          className={`p-3 rounded-xl transition-all ${isVideoOff ? 'bg-red-500/20 text-red-500' : 'bg-white/5 text-white hover:bg-white/10'}`}
+          className="btn"
+          style={{ 
+            background: isVideoOff ? 'var(--error)' : 'var(--bg)', 
+            color: isVideoOff ? '#fff' : 'var(--text)', 
+            border: '1px solid var(--border)',
+            padding: '10px',
+            borderRadius: '50%'
+          }}
         >
-          {isVideoOff ? <VideoOff size={20} /> : <Video size={20} />}
+          {isVideoOff ? <VideoOff size={18} /> : <Video size={18} />}
         </button>
         <button 
           onClick={() => window.location.href = '/dashboard'}
-          className="p-3 rounded-xl bg-red-600 text-white hover:bg-red-700 transition-all shadow-lg shadow-red-600/20"
+          className="btn btn-error"
+          style={{ padding: '10px', borderRadius: '50%' }}
         >
-          <PhoneOff size={20} />
+          <PhoneOff size={18} />
         </button>
       </div>
-
-      <style jsx>{`
-        .glass-morphism {
-          background: rgba(255, 255, 255, 0.03);
-          backdrop-filter: blur(10px);
-          border: 1px solid rgba(255, 255, 255, 0.05);
-        }
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
-      `}</style>
     </div>
   );
 }
