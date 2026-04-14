@@ -1,11 +1,14 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import io from 'socket.io-client';
 import VideoPlayer from '@/components/VideoPlayer';
 import VideoCall from '@/components/VideoCall';
 import Chat from '@/components/Chat';
-import { MessageSquare, Users, Video, Clipboard, CheckCircle, Lock } from 'lucide-react';
+import { 
+  MessageSquare, Users, Video, Clipboard, CheckCircle, 
+  Lock, Info, MoreVertical, ShieldAlert
+} from 'lucide-react';
 
 export default function Room() {
   const { id: roomId } = useParams();
@@ -13,15 +16,15 @@ export default function Room() {
   const [socket, setSocket] = useState(null);
   const [user, setUser] = useState(null);
   const [copied, setCopied] = useState(false);
-  const [activeTab, setActiveTab] = useState('call');
+  const [activeTab, setActiveTab] = useState(null); // 'chat' or 'people' or null
   const [localScreenStream, setLocalScreenStream] = useState(null);
   const [remoteScreenStream, setRemoteScreenStream] = useState(null);
   const [roomUsers, setRoomUsers] = useState([]);
   const [isLocked, setIsLocked] = useState(false);
   const [passwordEntered, setPasswordEntered] = useState(false);
   const [passwordInput, setPasswordInput] = useState('');
-  const [passError, setPassError] = useState('');
 
+  // 1. Password Protection Logic
   useEffect(() => {
     fetch(`/api/rooms?roomId=${roomId}`)
       .then(res => res.json())
@@ -31,6 +34,7 @@ export default function Room() {
       });
   }, [roomId]);
 
+  // 2. Main Logic Initialization
   useEffect(() => {
     if (!passwordEntered) return;
 
@@ -44,14 +48,10 @@ export default function Room() {
         setUser(data.user);
 
         const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3001';
-        const newSocket = io(socketUrl, {
-          transports: ['websocket'],
-          reconnectionAttempts: 5,
-        });
+        const newSocket = io(socketUrl, { transports: ['websocket'] });
         setSocket(newSocket);
 
         newSocket.emit('join-room', { roomId, username: data.user.username });
-
         newSocket.on('existing-users', (users) => setRoomUsers(users));
         newSocket.on('user-joined', ({ id, username }) => setRoomUsers(prev => [...prev, { id, username }]));
         newSocket.on('user-left', ({ id }) => setRoomUsers(prev => prev.filter(u => u.id !== id)));
@@ -60,107 +60,134 @@ export default function Room() {
       });
   }, [roomId, router, passwordEntered]);
 
-  const handleVerifyPassword = async (e) => {
-    e.preventDefault();
-    const res = await fetch('/api/rooms/verify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ roomId, password: passwordInput }),
-    });
-    if (res.ok) {
-      setPasswordEntered(true);
-      setIsLocked(false);
-    } else setPassError('Invalid password');
-  };
+  const toggleTab = (tab) => setActiveTab(activeTab === tab ? null : tab);
 
   if (isLocked && !passwordEntered) return (
-    <div className="container flex justify-center items-center" style={{ minHeight: '80vh' }}>
-      <div className="card w-full" style={{ maxWidth: '400px', textAlign: 'center' }}>
-        <Lock size={48} style={{ color: 'var(--primary)', marginBottom: '1rem', margin: '0 auto' }} />
-        <h2 style={{ marginBottom: '0.5rem' }}>Private Room</h2>
-        <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem' }}>Enter password to join the party.</p>
-        <form onSubmit={handleVerifyPassword} className="flex flex-col gap-3">
-          <input type="password" className="input" placeholder="Password" value={passwordInput} onChange={(e) => setPasswordInput(e.target.value)} required />
-          {passError && <p style={{ color: 'var(--error)', fontSize: '0.8rem' }}>{passError}</p>}
-          <button type="submit" className="btn btn-primary w-full">Join Now</button>
+    <div className="flex items-center justify-center min-h-screen bg-[#f8fafc] dark:bg-[#0f172a]">
+      <div className="card w-full max-w-sm text-center p-8">
+        <ShieldAlert size={48} className="mx-auto text-blue-500 mb-4" />
+        <h2 className="text-xl font-bold mb-2">Private Meeting</h2>
+        <p className="text-gray-500 text-sm mb-6">Enter the room password to join the party.</p>
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          fetch('/api/rooms/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ roomId, password: passwordInput }),
+          }).then(res => res.ok ? setPasswordEntered(true) : alert('Wrong Password'));
+        }} className="space-y-4">
+          <input type="password" placeholder="Password" className="input" value={passwordInput} onChange={e => setPasswordInput(e.target.value)} required />
+          <button type="submit" className="btn btn-primary w-full py-3">Join Meeting</button>
         </form>
       </div>
     </div>
   );
 
   if (!user || !socket) return (
-    <div className="container flex justify-center items-center" style={{ minHeight: '80vh' }}>
-      <h2 className="animate-pulse" style={{ color: 'var(--text-muted)' }}>Entering Room...</h2>
+    <div className="flex items-center justify-center min-h-screen bg-[#f8fafc] dark:bg-[#0f172a]">
+      <div className="text-center">
+        <div className="flex gap-1 justify-center mb-4">
+          <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" />
+          <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce [animation-delay:0.2s]" />
+          <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce [animation-delay:0.4s]" />
+        </div>
+        <p className="text-sm font-medium text-gray-400">Joining room {roomId}...</p>
+      </div>
     </div>
   );
 
   return (
-    <div className="container" style={{ paddingBottom: '2rem' }}>
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 style={{ fontSize: '1.25rem', fontWeight: 800 }}>
-            {roomId}
-          </h1>
-          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Share this ID with friends</p>
+    <div className="flex flex-col h-screen overflow-hidden bg-[#f8fafc] dark:bg-[#0f172a]">
+      {/* 1. Main Viewport (Video / Movie Area) */}
+      <div className="flex-1 relative flex overflow-hidden">
+        
+        {/* The "Center Stage" */}
+        <div className="flex-1 flex flex-col p-4 space-y-4">
+          <div className="flex-1 bg-black rounded-xl overflow-hidden shadow-2xl relative">
+            <VideoPlayer 
+              socket={socket} 
+              roomId={roomId} 
+              isHost={true} 
+              localScreenStream={localScreenStream} 
+              setLocalScreenStream={setLocalScreenStream} 
+              remoteScreenStream={remoteScreenStream} 
+            />
+          </div>
         </div>
-        <div className="flex gap-2">
-          <button onClick={() => { navigator.clipboard.writeText(roomId); setCopied(true); setTimeout(() => setCopied(false), 2000); }} className="btn btn-secondary">
-            {copied ? <CheckCircle size={16} /> : <Clipboard size={16} />}
-            <span>{copied ? 'Copied' : 'Copy ID'}</span>
-          </button>
-        </div>
+
+        {/* The Sidebar (Google Meet Style) */}
+        {activeTab && (
+          <div className="w-[360px] bg-white dark:bg-[#1e293b] border-l dark:border-gray-800 flex flex-col m-4 rounded-xl shadow-xl overflow-hidden transition-all duration-300">
+            <div className="p-4 flex justify-between items-center border-bottom dark:border-gray-800">
+              <h2 className="text-lg font-semibold capitalize">{activeTab} Details</h2>
+              <button onClick={() => setActiveTab(null)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full">
+                <MoreVertical size={20} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              {activeTab === 'chat' && <Chat socket={socket} roomId={roomId} username={user.username} />}
+              {activeTab === 'people' && (
+                <div className="p-4 space-y-3">
+                  <p className="text-xs uppercase font-bold text-gray-400 tracking-widest mb-4">In attendance</p>
+                  <div className="flex items-center gap-3 p-2 rounded-lg bg-blue-50 dark:bg-blue-500/10">
+                    <div className="w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold">{user.username[0]}</div>
+                    <span className="font-medium text-sm">{user.username} (You)</span>
+                  </div>
+                  {roomUsers.map(u => (
+                    <div key={u.id} className="flex items-center gap-3 p-2">
+                      <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center font-bold">{u.username[0]}</div>
+                      <span className="text-sm font-medium">{u.username}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
-      <div className="room-layout">
-        <div className="flex flex-col gap-4">
-          <VideoPlayer socket={socket} roomId={roomId} isHost={true} localScreenStream={localScreenStream} setLocalScreenStream={setLocalScreenStream} remoteScreenStream={remoteScreenStream} />
+      {/* 2. Bottom Toolbar (Classic GMeet Style) */}
+      <div className="h-[80px] bg-white dark:bg-[#0f172a] border-t dark:border-gray-800 flex items-center justify-between px-6 z-50">
+        
+        {/* Left: Meeting Info */}
+        <div className="flex items-center gap-4 w-[250px]">
+          <div className="hidden sm:block">
+            <p className="text-sm font-semibold">{new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} | {roomId}</p>
+          </div>
+          <button 
+            onClick={() => { navigator.clipboard.writeText(roomId); setCopied(true); setTimeout(() => setCopied(false), 2000); }} 
+            className="p-3 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-all text-gray-500"
+          >
+            {copied ? <CheckCircle className="text-green-500" size={20} /> : <Info size={20} />}
+          </button>
         </div>
 
-        <div className="sidebar-container">
-          <div className="flex p-1 gap-1" style={{ borderBottom: '1px solid var(--border)' }}>
-            {[
-              { id: 'call', icon: <Video size={16} />, label: 'Call' },
-              { id: 'chat', icon: <MessageSquare size={16} />, label: 'Chat' },
-              { id: 'users', icon: <Users size={16} />, label: `Users (${roomUsers.length + 1})` }
-            ].map(tab => (
-              <button 
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className="flex-1 p-2 rounded-lg flex items-center justify-center gap-2"
-                style={{ 
-                  background: activeTab === tab.id ? 'var(--bg-card)' : 'transparent',
-                  color: activeTab === tab.id ? 'var(--primary)' : 'var(--text-muted)',
-                  fontSize: '0.75rem',
-                  fontWeight: 600,
-                  boxShadow: activeTab === tab.id ? '0 1px 2px rgba(0,0,0,0.05)' : 'none'
-                }}
-              >
-                {tab.icon}
-                <span>{tab.label}</span>
-              </button>
-            ))}
-          </div>
+        {/* Center: Essential Controls (Injected into VideoCall component) */}
+        <div className="flex-1 flex justify-center">
+            <VideoCall 
+              socket={socket} 
+              roomId={roomId} 
+              username={user.username} 
+              localScreenStream={localScreenStream} 
+              onRemoteScreenStream={(stream) => setRemoteScreenStream(stream)} 
+              isGMeetMode={true}
+            />
+        </div>
 
-          <div style={{ flex: 1, padding: '1rem', overflow: 'hidden' }}>
-            {activeTab === 'call' && (
-              <VideoCall socket={socket} roomId={roomId} username={user.username} localScreenStream={localScreenStream} onRemoteScreenStream={(stream) => setRemoteScreenStream(stream)} />
-            )}
-            {activeTab === 'chat' && <Chat socket={socket} roomId={roomId} username={user.username} />}
-            {activeTab === 'users' && (
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center gap-3 p-3 rounded-xl" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
-                  <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 700 }}>{user.username[0].toUpperCase()}</div>
-                  <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>{user.username} (You)</span>
-                </div>
-                {roomUsers.map(u => (
-                  <div key={u.id} className="flex items-center gap-3 p-3 rounded-xl" style={{ border: '1px solid var(--border)' }}>
-                    <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--bg)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 700 }}>{u.username[0].toUpperCase()}</div>
-                    <span style={{ fontSize: '0.9rem', fontWeight: 500 }}>{u.username}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+        {/* Right: Feature Toggles */}
+        <div className="flex items-center justify-end gap-2 w-[250px]">
+          <button 
+            onClick={() => toggleTab('people')}
+            className={`p-4 rounded-full transition-all ${activeTab === 'people' ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500'}`}
+          >
+            <Users size={20} />
+          </button>
+          <button 
+            onClick={() => toggleTab('chat')}
+            className={`p-4 rounded-full transition-all ${activeTab === 'chat' ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500'}`}
+          >
+            <MessageSquare size={20} />
+          </button>
         </div>
       </div>
     </div>
