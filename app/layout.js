@@ -1,19 +1,24 @@
 import './globals.css';
-import Navbar from '@/components/Navbar';
+import { Plus_Jakarta_Sans } from 'next/font/google';
+
+const jakarta = Plus_Jakarta_Sans({ 
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700', '800'],
+  variable: '--font-jakarta',
+});
 
 export const metadata = {
-  title: 'TGStream | Watch Movies Together',
-  description: 'A secure and high-performance watch party application.',
+  title: 'TGStream - Premium Watch Parties',
+  description: 'Experience the ultimate watch party with high-quality streaming and video calls.',
 };
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body>
-        <Navbar />
-        <main style={{ paddingTop: '80px', minHeight: '100vh' }}>
+    <html lang="en" className={`${jakarta.variable} dark`}>
+      <body className="bg-[#05060f] text-white selection:bg-indigo-500/30">
+        <div className="flex flex-col min-h-screen">
           {children}
-        </main>
+        </div>
       </body>
     </html>
   );
