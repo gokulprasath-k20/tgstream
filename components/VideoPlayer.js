@@ -1,6 +1,6 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
-import { Play, Pause, Maximize, Monitor, Link as LinkIcon, X } from 'lucide-react';
+import { Monitor, Link as LinkIcon } from 'lucide-react';
 
 export default function VideoPlayer({ socket, roomId, isHost, localScreenStream, setLocalScreenStream, remoteScreenStream }) {
   const [videoUrl, setVideoUrl] = useState('');
@@ -25,9 +25,7 @@ export default function VideoPlayer({ socket, roomId, isHost, localScreenStream,
         setLocalScreenStream(stream);
         socket.emit('screen-share-status', { roomId, isSharing: true });
         stream.getVideoTracks()[0].onended = () => stopSharing();
-      } catch (err) {
-        console.error("Error sharing screen:", err);
-      }
+      } catch (err) { console.error(err); }
     } else stopSharing();
   };
 
@@ -57,8 +55,9 @@ export default function VideoPlayer({ socket, roomId, isHost, localScreenStream,
   }, [localScreenStream, remoteScreenStream, hasStream]);
 
   return (
-    <div className="card h-full flex flex-col gap-4" style={{ padding: '0', overflow: 'hidden', minHeight: '400px', background: '#000' }}>
-      <div style={{ flex: 1, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div className="flex flex-col h-full bg-[#000]">
+      {/* 1. Main Viewport */}
+      <div className="flex-1 relative flex items-center justify-center overflow-hidden">
         {activeUrl || hasStream ? (
           <video 
             ref={videoRef} 
@@ -72,36 +71,35 @@ export default function VideoPlayer({ socket, roomId, isHost, localScreenStream,
             onSeeked={() => isHost && !hasStream && socket.emit('sync-video', { roomId, action: 'seek', time: videoRef.current.currentTime })}
           />
         ) : (
-          <div style={{ textAlign: 'center', color: '#64748b' }}>
-            <Monitor size={48} style={{ marginBottom: '1rem', opacity: 0.3 }} />
-            <p style={{ fontSize: '0.9rem', fontWeight: 500 }}>Waiting for content...</p>
+          <div className="text-center opacity-40">
+            <Monitor size={48} className="mx-auto mb-4" />
+            <p className="text-sm font-medium">Ready to watch something amazing?</p>
           </div>
         )}
       </div>
 
-      <div style={{ padding: '1rem', display: 'flex', gap: '0.75rem', background: 'var(--bg-secondary)', borderTop: '1px solid var(--border)' }}>
-        <form onSubmit={handleUrlSubmit} style={{ flex: 1, display: 'flex', gap: '0.5rem' }}>
-          <div style={{ position: 'relative', flex: 1 }}>
-            <LinkIcon size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+      {/* 2. Control Input Area */}
+      <div className="p-4 bg-[#111114] border-t border-white/5 flex gap-3">
+        <form onSubmit={handleUrlSubmit} className="flex-1 flex gap-2">
+          <div className="relative flex-1">
+            <LinkIcon size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
             <input 
               type="text" 
-              className="input" 
-              placeholder="Paste movie URL..." 
-              style={{ paddingLeft: '2.5rem', fontSize: '0.85rem' }}
+              className="w-full bg-white/5 border border-white/10 p-2.5 pl-10 rounded-lg text-sm outline-none focus:border-blue-500/50 transition-all" 
+              placeholder="Paste movie link (mp4, webm)..." 
               value={videoUrl}
               onChange={(e) => setVideoUrl(e.target.value)}
             />
           </div>
-          <button type="submit" className="btn btn-primary" style={{ padding: '0 1.25rem' }}>Load</button>
+          <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-5 rounded-lg text-sm font-bold transition-all">Load</button>
         </form>
         
         <button 
           onClick={toggleScreenShare} 
-          className={isSharing ? 'btn btn-error' : 'btn btn-secondary'}
-          style={{ padding: '0 1.25rem' }}
+          className={`px-5 rounded-lg text-sm font-bold flex items-center gap-2 transition-all ${isSharing ? 'bg-red-600' : 'bg-gray-800'}`}
         >
           <Monitor size={18} />
-          <span style={{ fontSize: '0.85rem' }}>{isSharing ? 'Stop' : 'Share'}</span>
+          <span>{isSharing ? 'Stop' : 'Share Screen'}</span>
         </button>
       </div>
     </div>

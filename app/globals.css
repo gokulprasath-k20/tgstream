@@ -1,151 +1,156 @@
 :root {
-  --bg: #05060f;
-  --bg-surface: #0f1120;
-  --bg-card: rgba(30, 32, 50, 0.7);
-  --primary: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
-  --accent: #22d3ee;
-  --text: #f8fafc;
-  --text-muted: #94a3b8;
-  --border: rgba(255, 255, 255, 0.08);
-  --error: #f43f5e;
-  --success: #10b981;
+  --bg-deep: #0e0f14;
+  --bg-panel: #1e1f24;
+  --bg-card: #28292e;
+  --primary: #8ab4f8;
+  --error: #ea4335;
+  --text: #ffffff;
+  --text-muted: #bdc1c6;
+  --border: #3c4043;
 }
 
 * {
   box-sizing: border-box;
   padding: 0;
   margin: 0;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Inter', system-ui, sans-serif;
 }
 
 body {
-  background: radial-gradient(circle at top right, #1e1b4b, #05060f);
+  background-color: var(--bg-deep);
   color: var(--text);
   overflow: hidden;
   height: 100vh;
 }
 
-/* Glassmorphism Classes */
-.glass {
-  background: var(--bg-card);
-  backdrop-filter: blur(12px) saturate(180%);
-  -webkit-backdrop-filter: blur(12px) saturate(180%);
-  border: 1px solid var(--border);
-}
-
-.gmeet-container {
+/* Master Layout Framework */
+.theme-container {
   display: flex;
   flex-direction: column;
   height: 100vh;
+  width: 100vw;
 }
 
-.gmeet-main {
+/* 1. Main Content Wrapper */
+.main-wrapper {
   flex: 1;
   display: flex;
-  padding: 1.5rem;
   overflow: hidden;
-  gap: 1.5rem;
+  padding: 12px;
+  gap: 12px;
 }
 
-.gmeet-video-area {
+/* 2. Primary Media Area (The Stage) */
+.media-stage {
   flex: 1;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0,0,0,0.4);
-  border-radius: 24px;
-  overflow: hidden;
-  position: relative;
-  box-shadow: 0 0 40px rgba(0,0,0,0.5), inset 0 0 20px rgba(255,255,255,0.02);
-  border: 1px solid rgba(255,255,255,0.05);
-}
-
-/* Floating Participant Grid with WOW effect */
-.video-tile {
+  flex-direction: column;
   background: #000;
-  border-radius: 20px;
+  border-radius: 16px;
   overflow: hidden;
   position: relative;
+  min-width: 0; /* Prevents flex overflow */
+}
+
+/* 3. The Participant Strip (Google Meet style) */
+.participant-strip {
+  width: 250px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  transition: all 0.3s ease;
+}
+
+.participant-tile {
+  background: var(--bg-card);
+  border-radius: 12px;
   aspect-ratio: 16/9;
-  border: 2px solid transparent;
-  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
 }
 
-.video-tile:hover {
-  transform: scale(1.05) translateY(-5px);
-  border-color: #6366f1;
-  box-shadow: 0 0 25px rgba(99, 102, 241, 0.4);
-}
-
-.tile-label {
+.tile-overlay {
   position: absolute;
-  bottom: 0.75rem;
-  left: 0.75rem;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
-  padding: 0.25rem 0.75rem;
-  border-radius: 8px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  border: 1px solid rgba(255,255,255,0.1);
+  bottom: 8px;
+  left: 8px;
+  background: rgba(0,0,0,0.6);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
 }
 
-/* Premium Toolbar */
-.gmeet-toolbar {
-  height: 100px;
+/* 4. Side Panels (Chat/Info) */
+.side-panel {
+  width: 360px;
+  background: var(--bg-panel);
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 5. GMeet Style Bottom Bar */
+.bottom-bar {
+  height: 80px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 2.5rem;
-  background: rgba(5, 6, 15, 0.8);
-  backdrop-filter: blur(20px);
-  border-top: 1px solid rgba(255,255,255,0.05);
+  padding: 0 24px;
 }
 
-.control-btn {
-  width: 52px;
-  height: 52px;
-  border-radius: 16px;
+.bar-center {
+  display: flex;
+  gap: 12px;
+}
+
+.circle-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
   cursor: pointer;
-  background: rgba(255, 255, 255, 0.05);
+  transition: 0.2s;
   color: #fff;
-  transition: all 0.3s;
-  border: 1px solid rgba(255,255,255,0.08);
 }
 
-.control-btn:hover {
-  background: rgba(255, 255, 255, 0.12);
-  transform: translateY(-2px);
-  border-color: rgba(255,255,255,0.2);
+.circle-btn:hover {
+  background: var(--bg-card);
 }
 
-.control-btn.active {
+.circle-btn.danger {
   background: var(--error);
-  box-shadow: 0 0 15px rgba(244, 63, 94, 0.4);
-}
-
-.btn-leave {
-  background: var(--error);
-  width: 70px;
-  border-radius: 20px;
   border: none;
+  width: 60px;
 }
 
-.btn-leave:hover {
-  background: #e11d48;
-  box-shadow: 0 0 20px rgba(244, 63, 94, 0.5);
-}
+/* Utilities */
+.hidden { display: none; }
 
-/* Animations */
-@keyframes slideUp {
-  from { transform: translateY(20px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-}
-
-.animate-slide-up {
-  animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+@media (max-width: 1024px) {
+  .main-wrapper {
+    flex-direction: column;
+  }
+  .participant-strip {
+    width: 100%;
+    height: 120px;
+    flex-direction: row;
+    overflow-x: auto;
+  }
+  .side-panel {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    bottom: 90px;
+    z-index: 1000;
+    width: calc(100% - 20px);
+  }
 }
