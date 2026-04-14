@@ -1,8 +1,8 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff, Video, VideoOff, PhoneOff, MonitorOff } from 'lucide-react';
+import { Mic, MicOff, Video, VideoOff, PhoneOff } from 'lucide-react';
 
-export default function VideoCall({ socket, roomId, username, localScreenStream, onRemoteScreenStream, isGMeetMode }) {
+export default function VideoCall({ socket, roomId, username, localScreenStream, onRemoteScreenStream, isGMeetClassic }) {
   const [localStream, setLocalStream] = useState(null);
   const [remoteStreams, setRemoteStreams] = useState([]);
   const [isMuted, setIsMuted] = useState(false);
@@ -53,6 +53,7 @@ export default function VideoCall({ socket, roomId, username, localScreenStream,
       await pc.setLocalDescription(offer);
       socket.emit('signal', { targetId: id, signal: offer });
     });
+
     socket.on('signal', async ({ senderId, signal }) => {
       let pc = pcsRef.current[senderId];
       if (!pc) pc = createPC(senderId, localStream);
@@ -62,67 +63,49 @@ export default function VideoCall({ socket, roomId, username, localScreenStream,
         await pc.setLocalDescription(answer);
         socket.emit('signal', { targetId: senderId, signal: answer });
       } else if (signal.type === 'answer') await pc.setRemoteDescription(new RTCSessionDescription(signal));
-      else if (signal.candidate) await pc.addIceCandidate(new RTCIceCandidate(signal.candidate)).catch(e => {});
+      else if (signal.candidate) await pc.addIceCandidate(new RTCIceCandidate(signal.candidate));
     });
+
     socket.on('user-left', ({ id }) => {
         if (pcsRef.current[id]) { pcsRef.current[id].close(); delete pcsRef.current[id]; }
         setRemoteStreams(prev => prev.filter(p => p.id !== id));
     });
+
     return () => { socket.off('initiate-call'); socket.off('signal'); socket.off('user-left'); };
   }, [socket, localStream]);
-
-  useEffect(() => {
-    if (!localScreenStream) return;
-    Object.keys(pcsRef.current).forEach(async (id) => {
-      const pc = pcsRef.current[id];
-      localScreenStream.getTracks().forEach(track => pc.addTrack(track, localScreenStream));
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-      socket.emit('signal', { targetId: id, signal: offer });
-    });
-  }, [localScreenStream]);
 
   const toggleMute = () => { localStream.getAudioTracks()[0].enabled = isMuted; setIsMuted(!isMuted); };
   const toggleVideo = () => { localStream.getVideoTracks()[0].enabled = isVideoOff; setIsVideoOff(!isVideoOff); };
 
   return (
     <>
-      {/* 1. The GMeet Floating Grid (Positioned in the room view) */}
-      <div className="fixed right-6 top-32 flex flex-col gap-4 pointer-events-none" style={{ zIndex: 40 }}>
-        {/* Your Preview Card */}
-        <div className="w-56 aspect-video bg-gray-900 rounded-xl overflow-hidden shadow-lg border-2 border-transparent hover:border-blue-500 transition-all pointer-events-auto">
+      {/* GMeet Floating Video Tiles */}
+      <div className="fixed right-6 top-6 flex flex-col gap-3 z-40 pointer-events-none">
+        {/* Your Preview */}
+        <div className="video-tile w-60 shadow-2xl border-2 border-transparent hover:border-blue-500 pointer-events-auto">
           <video ref={localVideoRef} autoPlay muted playsInline className="w-full h-full object-cover" style={{ transform: 'scaleX(-1)' }} />
-          <div className="absolute bottom-2 left-2 px-2 py-0.5 bg-black/50 rounded text-[10px] text-white">You {isMuted && '🔇'}</div>
+          <div className="tile-label">You {isMuted && '🔇'}</div>
         </div>
 
-        {/* Remote Users Card */}
+        {/* Remote Users */}
         {remoteStreams.map(peer => (
-          <div key={peer.id} className="w-56 aspect-video bg-gray-900 rounded-xl overflow-hidden shadow-lg pointer-events-auto group relative">
+          <div key={peer.id} className="video-tile w-60 shadow-2xl pointer-events-auto">
             <video autoPlay playsInline className="w-full h-full object-cover" ref={el => { if (el) el.srcObject = peer.stream; }} />
-            <div className="absolute bottom-2 left-2 px-2 py-0.5 bg-black/50 rounded text-[10px] text-white">{peer.username}</div>
+            <div className="tile-label">{peer.username}</div>
             <div onClick={(e) => e.currentTarget.parentElement.querySelector('video').play()} className="absolute inset-0 cursor-pointer" />
           </div>
         ))}
       </div>
 
-      {/* 2. The GMeet Control Pill (Centered in bottom bar) */}
+      {/* Control Buttons (Matches GMeet circle style) */}
       <div className="flex items-center gap-3">
-        <button 
-            onClick={toggleMute} 
-            className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${isMuted ? 'bg-[#ea4335] text-white' : 'bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700'}`}
-        >
+        <button onClick={toggleMute} className={`control-btn ${isMuted ? 'active' : ''}`}>
           {isMuted ? <MicOff size={20} /> : <Mic size={20} />}
         </button>
-        <button 
-            onClick={toggleVideo} 
-            className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${isVideoOff ? 'bg-[#ea4335] text-white' : 'bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700'}`}
-        >
+        <button onClick={toggleVideo} className={`control-btn ${isVideoOff ? 'active' : ''}`}>
           {isVideoOff ? <VideoOff size={20} /> : <Video size={20} />}
         </button>
-        <button 
-            onClick={() => window.location.href = '/dashboard'} 
-            className="w-12 h-12 rounded-full bg-[#ea4335] text-white hover:bg-[#d93025] flex items-center justify-center shadow-lg hover:shadow-red-500/20"
-        >
+        <button onClick={() => window.location.href = '/dashboard'} className="control-btn btn-leave">
           <PhoneOff size={20} />
         </button>
       </div>
