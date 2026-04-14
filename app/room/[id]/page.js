@@ -48,9 +48,12 @@ export default function Room() {
         }
         setUser(data.user);
 
-        // 3. Initialize Socket connection
+        // 3. Initialize Socket connection with WebSocket transport for production stability
         const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3001';
-        const newSocket = io(socketUrl);
+        const newSocket = io(socketUrl, {
+          transports: ['websocket'],
+          reconnectionAttempts: 5,
+        });
         setSocket(newSocket);
 
         newSocket.emit('join-room', { roomId, username: data.user.username });

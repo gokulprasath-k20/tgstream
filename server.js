@@ -7,9 +7,11 @@ const httpServer = http.createServer();
 
 const io = new Server(httpServer, {
   cors: {
-    origin: "*", // Adjust for production
+    origin: "*", // Allows any domain to connect
     methods: ["GET", "POST"],
+    credentials: true
   },
+  transports: ['websocket', 'polling']
 });
 
 const rooms = new Map();
