@@ -171,22 +171,24 @@ export default function VideoCall({ socket, roomId, username, localScreenStream,
         { urls: 'stun:stun2.l.google.com:19302' },
         { urls: 'stun:stun.services.mozilla.com' },
         
-        // TURN servers (Relay data when STUN fails)
-        {
-          urls: "turn:global.relay.metered.ca:80",
-          username: process.env.NEXT_PUBLIC_TURN_USERNAME,
-          credential: process.env.NEXT_PUBLIC_TURN_PASSWORD
-        },
-        {
-          urls: "turn:global.relay.metered.ca:443",
-          username: process.env.NEXT_PUBLIC_TURN_USERNAME,
-          credential: process.env.NEXT_PUBLIC_TURN_PASSWORD
-        },
-        {
-          urls: "turn:global.relay.metered.ca:443?transport=tcp",
-          username: process.env.NEXT_PUBLIC_TURN_USERNAME,
-          credential: process.env.NEXT_PUBLIC_TURN_PASSWORD
-        }
+        // TURN servers (Only add if credentials exist)
+        ...(process.env.NEXT_PUBLIC_TURN_USERNAME ? [
+          {
+            urls: "turn:global.relay.metered.ca:80",
+            username: process.env.NEXT_PUBLIC_TURN_USERNAME,
+            credential: process.env.NEXT_PUBLIC_TURN_PASSWORD
+          },
+          {
+            urls: "turn:global.relay.metered.ca:443",
+            username: process.env.NEXT_PUBLIC_TURN_USERNAME,
+            credential: process.env.NEXT_PUBLIC_TURN_PASSWORD
+          },
+          {
+            urls: "turn:global.relay.metered.ca:443?transport=tcp",
+            username: process.env.NEXT_PUBLIC_TURN_USERNAME,
+            credential: process.env.NEXT_PUBLIC_TURN_PASSWORD
+          }
+        ] : [])
       ]
     });
 
