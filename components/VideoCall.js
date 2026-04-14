@@ -192,15 +192,21 @@ export default function VideoCall({ socket, roomId, username, localScreenStream,
         const existingPeer = prev.find(p => p.id === targetId);
         
         if (existingPeer) {
-          // Add the new track to the existing stream if it's not already there
+          // If we already have this peer, check if this is a NEW video track (Screen Share)
+          if (e.track.kind === 'video') {
+            const videoTracks = existingPeer.stream.getVideoTracks();
+            // If it's a second video track, it's a screen share
+            if (videoTracks.length > 0 && videoTracks[0].id !== e.track.id) {
+              const screenStream = new MediaStream([e.track]);
+              onRemoteScreenStream(screenStream);
+              return prev;
+            }
+          }
+
           if (!existingPeer.stream.getTracks().find(t => t.id === e.track.id)) {
             existingPeer.stream.addTrack(e.track);
           }
-
-          if (existingPeer.stream.id !== remoteStream.id) {
-            onRemoteScreenStream(remoteStream);
-          }
-          return [...prev]; // Trigger re-render
+          return [...prev]; 
         }
 
         setupAudioAnalyzer(remoteStream, targetId);

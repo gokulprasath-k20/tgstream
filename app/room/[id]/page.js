@@ -135,26 +135,30 @@ export default function Room() {
   );
 
   return (
-    <div className="flex" style={{ height: 'calc(100vh - 80px)', overflow: 'hidden' }}>
-      {/* 75% MAIN VIDEO AREA */}
-      <div style={{ flex: '0 0 75%', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem', borderRight: '1px solid var(--border)' }}>
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 600 }}>Room: <span style={{ color: 'var(--primary)' }}>{roomId}</span></h2>
-            <button onClick={copyRoomId} className="btn btn-secondary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}>
-              {copied ? <CheckCircle size={14} style={{ color: 'var(--success)' }} /> : <Clipboard size={14} />}
-              {copied ? 'Copied' : 'Copy ID'}
-            </button>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="flex items-center gap-2" style={{ color: 'var(--success)', fontSize: '0.9rem' }}>
-              <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'currentColor' }}></div>
-              Connected as {user.username}
-            </span>
-          </div>
+    <div className="container" style={{ paddingTop: '5rem', height: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <div className="flex justify-between items-center mb-4">
+        <div className="flex items-center gap-4">
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 700 }}>
+            Room: <span style={{ color: 'var(--primary)' }}>{roomId}</span>
+          </h1>
+          <button 
+            onClick={() => { navigator.clipboard.writeText(roomId); }}
+            className="btn btn-secondary flex items-center gap-2" 
+            style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}
+          >
+            <Copy size={14} /> Copy ID
+          </button>
         </div>
+        
+        <span className="flex items-center gap-2" style={{ color: 'var(--success)', fontSize: '0.8rem' }}>
+          <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--success)' }}></span>
+          Connected as {user.username}
+        </span>
+      </div>
 
-        <div style={{ flex: 1, minHeight: 0 }}>
+      <div className="flex-1 grid-cols-layout" style={{ display: 'grid', gridTemplateColumns: '1fr 350px', gap: '1.5rem', minHeight: 0, paddingBottom: '2rem' }}>
+        {/* Main Video Area */}
+        <div className="flex flex-col gap-4 video-main" style={{ minHeight: 0 }}>
           <VideoPlayer 
             socket={socket} 
             roomId={roomId} 
@@ -167,7 +171,7 @@ export default function Room() {
       </div>
 
       {/* 25% SIDE PANEL (Video Call + Chat) */}
-      <div style={{ flex: '0 0 25%', display: 'flex', flexDirection: 'column', background: 'rgba(0,0,0,0.2)' }}>
+      <div className="sidebar-mobile" style={{ display: 'flex', flexDirection: 'column', background: 'rgba(0,0,0,0.2)' }}>
         <div className="flex" style={{ borderBottom: '1px solid var(--border)' }}>
           {[
             { id: 'call', icon: <Video size={18} />, label: 'Call' },
