@@ -261,7 +261,14 @@ export default function VideoCall({ socket, roomId, username, localScreenStream,
       <div className="flex-1" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem', overflowY: 'auto' }}>
         {/* Local Video */}
         <div className={`card ${speakingStatus['local'] ? 'speaking-pulse' : ''}`} style={{ transition: 'var(--transition)', padding: '0', position: 'relative', background: '#000', borderRadius: '1rem', overflow: 'hidden', height: '200px' }}>
-          <video ref={localVideoRef} autoPlay muted playsInline className="w-full h-full" style={{ objectFit: 'cover' }} />
+          <video 
+            ref={localVideoRef} 
+            autoPlay 
+            muted 
+            playsInline 
+            className="w-full h-full" 
+            style={{ objectFit: 'cover', transform: 'scaleX(-1)' }} 
+          />
           <div style={{ position: 'absolute', bottom: '10px', left: '10px', background: 'rgba(0,0,0,0.5)', padding: '2px 8px', borderRadius: '4px', fontSize: '0.8rem' }}>
             You {isMuted && '(Muted)'}
           </div>
