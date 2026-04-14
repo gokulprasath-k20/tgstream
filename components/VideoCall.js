@@ -165,8 +165,9 @@ export default function VideoCall({ socket, roomId, username, localScreenStream,
         { urls: 'stun:stun.l.google.com:19302' },
         { urls: 'stun:stun1.l.google.com:19302' },
         { urls: 'stun:stun2.l.google.com:19302' },
-        { urls: 'stun:stun3.l.google.com:19302' },
-        { urls: 'stun:stun4.l.google.com:19302' },
+        { urls: 'stun:stun.services.mozilla.com' },
+        { urls: 'stun:stun.vidyo.com' },
+        { urls: 'stun:stun.l.google.com:19305' },
       ]
     });
 
@@ -181,20 +182,22 @@ export default function VideoCall({ socket, roomId, username, localScreenStream,
     };
 
     pc.ontrack = (e) => {
-      const remoteStream = e.streams[0];
+      console.log(`[WebRTC] Received track: ${e.track.kind} from ${targetId}`);
+      const remoteStream = e.streams[0] || new MediaStream([e.track]);
       
-      // Check if this is a screen share track
-      // If the stream has a different ID than the one we already have for this peer, it's likely a screen share
       setRemoteStreams((prev) => {
         const existingPeer = prev.find(p => p.id === targetId);
         
         if (existingPeer) {
-          if (existingPeer.stream.id !== remoteStream.id) {
-            // This is a secondary stream (likely screen share)
-            onRemoteScreenStream(remoteStream);
-            return prev;
+          // Add the new track to the existing stream if it's not already there
+          if (!existingPeer.stream.getTracks().find(t => t.id === e.track.id)) {
+            existingPeer.stream.addTrack(e.track);
           }
-          return prev;
+
+          if (existingPeer.stream.id !== remoteStream.id) {
+            onRemoteScreenStream(remoteStream);
+          }
+          return [...prev]; // Trigger re-render
         }
 
         setupAudioAnalyzer(remoteStream, targetId);
