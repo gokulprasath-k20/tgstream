@@ -161,7 +161,13 @@ export default function VideoCall({ socket, roomId, username, localScreenStream,
 
   const createPeerConnection = (targetId, stream, targetName) => {
     const pc = new RTCPeerConnection({
-      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' },
+        { urls: 'stun:stun3.l.google.com:19302' },
+        { urls: 'stun:stun4.l.google.com:19302' },
+      ]
     });
 
     peersRef.current[targetId] = pc;
@@ -177,19 +183,21 @@ export default function VideoCall({ socket, roomId, username, localScreenStream,
     pc.ontrack = (e) => {
       const remoteStream = e.streams[0];
       
-      // If this is a secondary stream (screen share)
-      if (e.receiver.track.kind === 'video' && e.streams.length > 0) {
-        const existingPeer = remoteStreams.find(p => p.id === targetId);
-        if (existingPeer && existingPeer.stream.id !== remoteStream.id) {
-          onRemoteScreenStream(remoteStream);
-          return;
-        }
-      }
-
-      setupAudioAnalyzer(remoteStream, targetId);
-
+      // Check if this is a screen share track
+      // If the stream has a different ID than the one we already have for this peer, it's likely a screen share
       setRemoteStreams((prev) => {
-        if (prev.find(p => p.id === targetId)) return prev;
+        const existingPeer = prev.find(p => p.id === targetId);
+        
+        if (existingPeer) {
+          if (existingPeer.stream.id !== remoteStream.id) {
+            // This is a secondary stream (likely screen share)
+            onRemoteScreenStream(remoteStream);
+            return prev;
+          }
+          return prev;
+        }
+
+        setupAudioAnalyzer(remoteStream, targetId);
         return [...prev, { id: targetId, stream: remoteStream, username: targetName || 'User' }];
       });
     };
