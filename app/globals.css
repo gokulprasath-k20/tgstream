@@ -1,14 +1,14 @@
 :root {
-  --bg: #202124;
-  --bg-secondary: #28292c;
-  --bg-card: #3c4043;
-  --text: #ffffff;
-  --text-muted: #bdc1c6;
-  --primary: #8ab4f8;
-  --primary-hover: #aecbfa;
-  --border: #3c4043;
-  --error: #ea4335;
-  --success: #34a853;
+  --bg: #05060f;
+  --bg-surface: #0f1120;
+  --bg-card: rgba(30, 32, 50, 0.7);
+  --primary: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+  --accent: #22d3ee;
+  --text: #f8fafc;
+  --text-muted: #94a3b8;
+  --border: rgba(255, 255, 255, 0.08);
+  --error: #f43f5e;
+  --success: #10b981;
 }
 
 * {
@@ -19,27 +19,32 @@
 }
 
 body {
-  background-color: var(--bg);
+  background: radial-gradient(circle at top right, #1e1b4b, #05060f);
   color: var(--text);
   overflow: hidden;
   height: 100vh;
 }
 
-/* GMeet Grid Layout */
+/* Glassmorphism Classes */
+.glass {
+  background: var(--bg-card);
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  border: 1px solid var(--border);
+}
+
 .gmeet-container {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  background: var(--bg);
 }
 
 .gmeet-main {
   flex: 1;
   display: flex;
-  padding: 1rem;
+  padding: 1.5rem;
   overflow: hidden;
-  position: relative;
-  gap: 1rem;
+  gap: 1.5rem;
 }
 
 .gmeet-video-area {
@@ -47,156 +52,100 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #000;
-  border-radius: 12px;
+  background: rgba(0,0,0,0.4);
+  border-radius: 24px;
   overflow: hidden;
   position: relative;
+  box-shadow: 0 0 40px rgba(0,0,0,0.5), inset 0 0 20px rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.05);
 }
 
-/* Floating Grid for participants */
-.gmeet-participant-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  width: 280px;
-  overflow-y: auto;
-  padding-right: 0.5rem;
-}
-
+/* Floating Participant Grid with WOW effect */
 .video-tile {
   background: #000;
-  border-radius: 8px;
+  border-radius: 20px;
   overflow: hidden;
   position: relative;
   aspect-ratio: 16/9;
   border: 2px solid transparent;
-  transition: all 0.2s;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.4);
 }
 
 .video-tile:hover {
-  border-color: var(--primary);
+  transform: scale(1.05) translateY(-5px);
+  border-color: #6366f1;
+  box-shadow: 0 0 25px rgba(99, 102, 241, 0.4);
 }
 
 .tile-label {
   position: absolute;
-  bottom: 0.5rem;
-  left: 0.5rem;
-  background: rgba(0,0,0,0.5);
-  padding: 0.1rem 0.5rem;
-  border-radius: 4px;
+  bottom: 0.75rem;
+  left: 0.75rem;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  padding: 0.25rem 0.75rem;
+  border-radius: 8px;
   font-size: 0.75rem;
-  font-weight: 500;
+  font-weight: 600;
+  border: 1px solid rgba(255,255,255,0.1);
 }
 
-/* GMeet Bottom Control Bar */
+/* Premium Toolbar */
 .gmeet-toolbar {
-  height: 80px;
+  height: 100px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 1.5rem;
-  background: var(--bg);
-  z-index: 100;
-}
-
-.toolbar-left {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  width: 300px;
-}
-
-.toolbar-center {
-  flex: 1;
-  display: flex;
-  justify-content: center;
-  gap: 0.75rem;
+  padding: 0 2.5rem;
+  background: rgba(5, 6, 15, 0.8);
+  backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(255,255,255,0.05);
 }
 
 .control-btn {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  border: 1px solid var(--border);
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  background: var(--bg-secondary);
+  background: rgba(255, 255, 255, 0.05);
   color: #fff;
-  transition: all 0.2s;
+  transition: all 0.3s;
+  border: 1px solid rgba(255,255,255,0.08);
 }
 
 .control-btn:hover {
-  background: var(--bg-card);
+  background: rgba(255, 255, 255, 0.12);
+  transform: translateY(-2px);
+  border-color: rgba(255,255,255,0.2);
 }
 
 .control-btn.active {
   background: var(--error);
-  border-color: var(--error);
+  box-shadow: 0 0 15px rgba(244, 63, 94, 0.4);
 }
 
 .btn-leave {
   background: var(--error);
+  width: 70px;
+  border-radius: 20px;
   border: none;
-  width: 56px;
-  border-radius: 28px;
 }
 
-.toolbar-right {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.5rem;
-  width: 300px;
+.btn-leave:hover {
+  background: #e11d48;
+  box-shadow: 0 0 20px rgba(244, 63, 94, 0.5);
 }
 
-/* Sidebar Drawer Style */
-.gmeet-sidebar {
-  width: 360px;
-  background: #fff;
-  color: #202124;
-  border-radius: 12px;
-  margin: 0.5rem;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+/* Animations */
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
 
-.dark .gmeet-sidebar {
-  background: var(--bg-secondary);
-  color: #fff;
-}
-
-/* UI Elements */
-.input {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border);
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
-  color: #fff;
-  outline: none;
-}
-
-.btn-primary {
-  background: var(--primary);
-  color: #202124;
-  font-weight: 600;
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
-}
-
-@media (max-width: 1024px) {
-  .gmeet-main {
-    flex-direction: column;
-  }
-  .gmeet-participant-grid {
-    width: 100%;
-    flex-direction: row;
-    height: 120px;
-    overflow-x: auto;
-  }
-  .video-tile {
-    width: 180px;
-    aspect-ratio: 16/9;
-  }
+.animate-slide-up {
+  animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
