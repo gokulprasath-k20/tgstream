@@ -1,10 +1,12 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
-import { Monitor, Link as LinkIcon } from 'lucide-react';
+import { Monitor, Link as LinkIcon, Volume2, VolumeX } from 'lucide-react';
 
 export default function VideoPlayer({ socket, roomId, isHost, localScreenStream, setLocalScreenStream, remoteScreenStream }) {
   const [videoUrl, setVideoUrl] = useState('');
   const [activeUrl, setActiveUrl] = useState('');
+  const [isMuted, setIsMuted] = useState(false);
+  const [audioBlocked, setAudioBlocked] = useState(false);
   const videoRef = useRef(null);
 
   const isSharing = !!localScreenStream;
@@ -21,7 +23,13 @@ export default function VideoPlayer({ socket, roomId, isHost, localScreenStream,
   const toggleScreenShare = async () => {
     if (!isSharing) {
       try {
-        const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+        // Request audio: on Windows/Chrome this captures tab/system audio
+        const stream = await navigator.mediaDevices.getDisplayMedia({ 
+          video: { frameRate: { ideal: 30 }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+          audio: { echoCancellation: false, noiseSuppression: false, sampleRate: 44100 }
+        });
+        // 'detail' hint: browser prioritises sharpness over smoothness (good for screen/text)
+        stream.getVideoTracks().forEach(t => { t.contentHint = 'detail'; });
         setLocalScreenStream(stream);
         socket.emit('screen-share-status', { roomId, isSharing: true });
         stream.getVideoTracks()[0].onended = () => stopSharing();
@@ -35,6 +43,7 @@ export default function VideoPlayer({ socket, roomId, isHost, localScreenStream,
     socket.emit('screen-share-status', { roomId, isSharing: false });
   };
 
+  // ── Video sync via socket ────────────────────────────────────────────────────
   useEffect(() => {
     if (!socket) return;
     socket.on('video-sync', ({ action, url, time }) => {
@@ -48,28 +57,76 @@ export default function VideoPlayer({ socket, roomId, isHost, localScreenStream,
     return () => socket.off('video-sync');
   }, [socket, hasStream]);
 
+  // ── Bind screen stream to video element ──────────────────────────────────────
   useEffect(() => {
-    if (videoRef.current && hasStream) {
-      videoRef.current.srcObject = localScreenStream || remoteScreenStream;
+    const el = videoRef.current;
+    if (!el) return;
+
+    const stream = localScreenStream || remoteScreenStream;
+    if (stream) {
+      el.srcObject = stream;
+      el.muted = false;
+      // Explicit play() needed to satisfy autoplay policy for audio
+      el.play().catch(() => {
+        // If browser blocks autoplay with audio, mute and show unmute button
+        el.muted = true;
+        el.play().catch(console.error);
+        setAudioBlocked(true);
+      });
+    } else {
+      el.srcObject = null;
+      setAudioBlocked(false);
     }
-  }, [localScreenStream, remoteScreenStream, hasStream]);
+  }, [localScreenStream, remoteScreenStream]);
+
+  const handleUnmute = () => {
+    const el = videoRef.current;
+    if (el) {
+      el.muted = false;
+      setIsMuted(false);
+      setAudioBlocked(false);
+    }
+  };
 
   return (
     <div className="flex flex-col h-full bg-[#000]">
       {/* 1. Main Viewport */}
       <div className="flex-1 relative flex items-center justify-center overflow-hidden">
         {activeUrl || hasStream ? (
-          <video 
-            ref={videoRef} 
-            src={hasStream ? undefined : activeUrl} 
-            className="w-full h-full" 
-            autoPlay 
-            style={{ objectFit: 'contain' }}
-            controls={isHost && !hasStream}
-            onPlay={() => isHost && !hasStream && socket.emit('sync-video', { roomId, action: 'play' })}
-            onPause={() => isHost && !hasStream && socket.emit('sync-video', { roomId, action: 'pause' })}
-            onSeeked={() => isHost && !hasStream && socket.emit('sync-video', { roomId, action: 'seek', time: videoRef.current.currentTime })}
-          />
+          <>
+            <video 
+              ref={videoRef} 
+              src={hasStream ? undefined : activeUrl} 
+              className="w-full h-full" 
+              autoPlay 
+              style={{ objectFit: 'contain' }}
+              controls={isHost && !hasStream}
+              onPlay={() => isHost && !hasStream && socket.emit('sync-video', { roomId, action: 'play' })}
+              onPause={() => isHost && !hasStream && socket.emit('sync-video', { roomId, action: 'pause' })}
+              onSeeked={() => isHost && !hasStream && socket.emit('sync-video', { roomId, action: 'seek', time: videoRef.current.currentTime })}
+            />
+
+            {/* Audio blocked overlay — user must click to unmute */}
+            {audioBlocked && remoteScreenStream && (
+              <div className="absolute inset-0 flex items-end justify-center pb-8 pointer-events-none">
+                <button
+                  onClick={handleUnmute}
+                  className="pointer-events-auto flex items-center gap-2 bg-black/70 backdrop-blur-md border border-white/20 text-white text-sm font-bold px-5 py-3 rounded-2xl hover:bg-white/10 transition-all"
+                >
+                  <Volume2 size={18} className="text-indigo-400" />
+                  Click to enable audio
+                </button>
+              </div>
+            )}
+
+            {/* Screen share indicator */}
+            {hasStream && (
+              <div className="absolute top-3 left-3 flex items-center gap-2 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-xl text-xs font-bold text-white/70 border border-white/10">
+                <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                {localScreenStream ? 'You are sharing' : 'Screen Share'}
+              </div>
+            )}
+          </>
         ) : (
           <div className="text-center opacity-40">
             <Monitor size={48} className="mx-auto mb-4" />
@@ -96,10 +153,10 @@ export default function VideoPlayer({ socket, roomId, isHost, localScreenStream,
         
         <button 
           onClick={toggleScreenShare} 
-          className={`px-5 rounded-lg text-sm font-bold flex items-center gap-2 transition-all ${isSharing ? 'bg-red-600' : 'bg-gray-800'}`}
+          className={`px-5 rounded-lg text-sm font-bold flex items-center gap-2 transition-all ${isSharing ? 'bg-red-600 hover:bg-red-700' : 'bg-gray-800 hover:bg-gray-700'}`}
         >
           <Monitor size={18} />
-          <span>{isSharing ? 'Stop' : 'Share Screen'}</span>
+          <span>{isSharing ? 'Stop Sharing' : 'Share Screen'}</span>
         </button>
       </div>
     </div>

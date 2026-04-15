@@ -76,9 +76,10 @@ export default function VideoCall({
       .getUserMedia({ video: true, audio: true })
       .then((stream) => {
         if (cancelled) { stream.getTracks().forEach(t => t.stop()); return; }
+        // 'motion' hint tells the browser this is a live webcam — prioritise smoothness
+        stream.getVideoTracks().forEach(t => { t.contentHint = 'motion'; });
         localStreamRef.current = stream;
         setLocalStream(stream);
-        // Signal to existing peers that we're ready to call
         socket.emit('ready-for-handshake');
       })
       .catch((err) => {
@@ -162,21 +163,43 @@ export default function VideoCall({
       }
     };
 
-    // Incoming tracks — stream-order detection:
-    // 1st distinct video stream from a peer = camera, 2nd = screen share
+    // ── Apply encoding parameters after connection (can't set before negotiation) ──
+    pc.onconnectionstatechange = () => {
+      if (pc.connectionState !== 'connected') return;
+      pc.getSenders().forEach(sender => {
+        if (!sender.track) return;
+        const params = sender.getParameters();
+        if (!params.encodings || params.encodings.length === 0) return;
+        if (sender.track.kind === 'video') {
+          const isScreen = sender.track.contentHint === 'detail';
+          params.encodings[0].maxBitrate = isScreen ? 3_500_000 : 1_500_000;
+          params.encodings[0].maxFramerate = 30;
+          if (isScreen) params.encodings[0].priority = 'high';
+          sender.setParameters(params).catch(() => {});
+        }
+        if (sender.track.kind === 'audio') {
+          params.encodings[0].priority = 'high';
+          sender.setParameters(params).catch(() => {});
+        }
+      });
+    };
+
+    // ── Incoming tracks — stream-order detection (no kind filter so audio is included) ──
+    // All tracks from same stream share the same e.streams[0] reference.
+    // We process each STREAM once (on whichever track fires first).
+    // 1st stream from a peer = camera, 2nd+ = screen share (with its audio).
     pc.ontrack = (e) => {
-      if (e.track.kind !== 'video') return; // audio handled implicitly by streams
       const inStream = e.streams[0];
       if (!inStream) return;
 
-      console.log(`[WebRTC] video track from ${peerName}, stream: ${inStream.id.slice(0,8)}`);
-
-      // Track which stream IDs we've seen from this peer (ordered)
       if (!peerStreamIdsRef.current[peerId]) peerStreamIdsRef.current[peerId] = [];
       const seen = peerStreamIdsRef.current[peerId];
 
-      if (seen.includes(inStream.id)) return; // already handling this stream
+      // Skip if we've already triggered for this stream
+      if (seen.includes(inStream.id)) return;
       seen.push(inStream.id);
+
+      console.log(`[WebRTC] stream #${seen.length} from ${peerName}: ${inStream.getTracks().map(t => t.kind).join('+')}, id=${inStream.id.slice(0, 8)}`);
 
       if (seen.length === 1) {
         // First stream = camera
@@ -186,7 +209,7 @@ export default function VideoCall({
           return [...without, { id: peerId, stream: inStream, username: peerName || 'User' }];
         });
       } else {
-        // Subsequent streams = screen share
+        // Subsequent streams = screen share — stream already has both video + audio tracks
         onRemoteScreenStream?.(inStream);
       }
     };
@@ -223,7 +246,9 @@ export default function VideoCall({
       screenSendersRef.current[id] = [];
 
       if (localScreenStream) {
-        // Add new screen tracks
+        // Set quality hint so browser optimises for text/UI instead of motion
+        localScreenStream.getVideoTracks().forEach(t => { t.contentHint = 'detail'; });
+        // Add all tracks — video + audio (system/tab audio if user permitted it)
         localScreenStream.getTracks().forEach(track => {
           const sender = pc.addTrack(track, localScreenStream);
           screenSendersRef.current[id].push(sender);
