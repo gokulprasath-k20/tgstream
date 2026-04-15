@@ -28,7 +28,10 @@
     "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {
+    "autoprefixer": "^10.5.0",
     "eslint": "^9",
-    "eslint-config-next": "16.2.3"
+    "eslint-config-next": "16.2.3",
+    "postcss": "^8.5.9",
+    "tailwindcss": "^3.4.19"
   }
 }

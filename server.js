@@ -20,7 +20,11 @@ io.on("connection", (socket) => {
   console.log(`[Socket] New connection: ${socket.id}`);
   
   socket.on("join-room", ({ roomId, username }) => {
-    // Audit Adjustment: Handle cleaning up ghost users with same username
+    // Store username on socket for signal relay
+    socket.data.username = username;
+    socket.data.roomId = roomId;
+
+    // Clean up ghost users with same username
     const existingRoom = rooms.get(roomId);
     if (existingRoom) {
       existingRoom.users = existingRoom.users.filter(u => u.username !== username);
@@ -51,8 +55,21 @@ io.on("connection", (socket) => {
     io.to(roomId).emit("receive-message", msgData);
   });
 
+  socket.on("toggle-mute", (roomId) => {
+    io.to(roomId).emit("toggle-mute");
+  });
+
+  socket.on("toggle-video", (roomId) => {
+    io.to(roomId).emit("toggle-video");
+  });
+
   socket.on("signal", ({ targetId, signal }) => {
-    io.to(targetId).emit("signal", { senderId: socket.id, signal });
+    // Include senderName so the receiver knows who is calling
+    io.to(targetId).emit("signal", { 
+      senderId: socket.id, 
+      senderName: socket.data.username || 'User',
+      signal 
+    });
   });
 
   socket.on("disconnect", () => {

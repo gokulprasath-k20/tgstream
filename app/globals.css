@@ -1,152 +1,143 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 :root {
-  /* Zoom Light Theme */
-  --bg: #ffffff;
-  --bg-sidebar: #f7f9fa;
-  --bg-secondary: #f0f2f4;
-  --text: #131619;
-  --text-muted: #6e7680;
-  --border: #d2d8db;
-  --primary: #0b5fff; /* Zoom Blue */
-  --action-orange: #ff742e; /* Zoom Orange */
-  --action-blue: #0b5fff;
-  --action-grey: #6e7680;
+  --background: #05060f;
+  --foreground: #ffffff;
+  --primary: #6366f1;
+  --primary-hover: #4f46e5;
+  --secondary: #1e293b;
+  --muted: #94a3b8;
+  --border: rgba(255, 255, 255, 0.1);
+  --card-bg: rgba(255, 255, 255, 0.03);
 }
 
-.dark {
-  /* Zoom Dark Theme */
-  --bg: #101010;
-  --bg-sidebar: #1a1a1a;
-  --bg-secondary: #242424;
-  --text: #ffffff;
-  --text-muted: #a1a1a1;
-  --border: #333333;
+@layer base {
+  * {
+    @apply border-white/5;
+  }
+  body {
+    @apply bg-[#05060f] text-white selection:bg-indigo-500/30 overflow-x-hidden;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
 }
 
-* {
-  box-sizing: border-box;
-  padding: 0;
-  margin: 0;
-  font-family: 'Inter', -apple-system, sans-serif;
-  transition: background-color 0.3s ease, color 0.3s ease;
+@layer components {
+  .card {
+    @apply bg-white/5 border border-white/10 rounded-2xl p-8 backdrop-blur-xl shadow-2xl;
+  }
+  
+  .input {
+    @apply w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all;
+  }
+  
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl font-bold transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none;
+  }
+  
+  .btn-primary {
+    @apply bg-indigo-600 text-white hover:bg-indigo-500 shadow-lg shadow-indigo-600/20;
+  }
+  
+  .btn-secondary {
+    @apply bg-white/10 text-white hover:bg-white/20 border border-white/10;
+  }
+
+  /* Title Gradient Effect */
+  .title-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 via-blue-400 to-purple-400;
+  }
 }
 
-body {
-  background-color: var(--bg);
-  color: var(--text);
-  overflow: hidden;
-  height: 100vh;
+/* Custom Animations */
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-/* Master Zoom Layout */
-.zoom-layout {
-  display: flex;
-  height: 100vh;
-  width: 100vw;
+.animate-slide-up {
+  animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* 1. Zoom Sidebar (Left) */
-.zoom-sidebar {
-  width: 72px;
-  background: var(--bg-sidebar);
-  border-right: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding-top: 20px;
-  gap: 20px;
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
+.animate-fade-in {
+  animation: fadeIn 0.8s ease-out forwards;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-[#05060f];
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-white/10 rounded-full hover:bg-white/20 transition-colors;
+}
+
+/* Room Layout Implementation */
+.theme-container {
+  @apply h-screen flex flex-col bg-[#05060f] text-white;
+}
+
+.main-wrapper {
+  @apply flex-1 flex overflow-hidden;
+}
+
+.media-stage {
+  @apply flex-1 relative bg-black;
+}
+
+.side-panel {
+  @apply w-[360px] bg-[#0a0b14] border-l border-white/5 flex flex-col;
+}
+
+.participant-strip {
+  @apply w-[300px] bg-[#0a0b14]/50 border-l border-white/5 flex flex-col p-4 gap-4 overflow-y-auto;
+}
+
+.participant-tile {
+  @apply relative aspect-video bg-[#111] rounded-xl overflow-hidden border border-white/10 shadow-lg;
+}
+
+.tile-overlay {
+  @apply absolute bottom-3 left-3 bg-black/60 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider backdrop-blur-md;
+}
+
+.bottom-bar {
+  @apply h-[80px] bg-[#05060f] border-t border-white/5 px-6 flex items-center justify-between;
+}
+
+.circle-btn {
+  @apply w-12 h-12 rounded-full flex items-center justify-center bg-white/5 border border-white/10 hover:bg-white/10 transition-all;
+}
+
+.circle-btn.danger {
+  @apply bg-red-600/20 border-red-600/50 text-red-500 hover:bg-red-600 hover:text-white;
+}
+
+.bar-center {
+  @apply flex items-center gap-4;
+}
+
+/* Dashboard Specifics */
 .sidebar-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  color: var(--text-muted);
-  transition: all 0.2s;
+  @apply w-12 h-12 rounded-2xl flex items-center justify-center text-gray-500 hover:bg-white/5 hover:text-indigo-400 transition-all cursor-pointer;
 }
 
-.sidebar-icon:hover, .sidebar-icon.active {
-  background: var(--bg-secondary);
-  color: var(--primary);
+.sidebar-icon.active {
+  @apply bg-indigo-600/10 text-indigo-500 shadow-lg shadow-indigo-600/5;
 }
 
-/* 2. Dashboard Grid */
-.zoom-main {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  padding: 40px;
-  overflow-y: auto;
+.dashboard-card {
+  @apply bg-white/[0.03] border border-white/5 rounded-[32px] p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-white/[0.06] transition-all;
 }
 
-.action-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 160px);
-  gap: 40px;
-  margin-top: 50px;
-}
 
-.action-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  cursor: pointer;
-  transition: transform 0.2s;
-}
-
-.action-card:hover {
-  transform: translateY(-5px);
-}
-
-.action-icon-box {
-  width: 120px;
-  height: 120px;
-  border-radius: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  box-shadow: 0 10px 20px rgba(0,0,0,0.1);
-}
-
-.action-card span {
-  font-weight: 600;
-  font-size: 0.9rem;
-}
-
-/* 3. The Theme Toggle Switch */
-.theme-toggle-container {
-  position: fixed;
-  bottom: 20px;
-  left: 12px;
-  z-index: 100;
-}
-
-.toggle-pill {
-  width: 48px;
-  height: 24px;
-  background: var(--bg-secondary);
-  border-radius: 12px;
-  position: relative;
-  cursor: pointer;
-  border: 1px solid var(--border);
-}
-
-.toggle-circle {
-  width: 18px;
-  height: 18px;
-  background: var(--primary);
-  border-radius: 50%;
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  transition: transform 0.3s;
-}
-
-.dark .toggle-circle {
-  transform: translateX(24px);
-}

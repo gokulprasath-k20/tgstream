@@ -14,8 +14,8 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className={`${jakarta.variable} dark`}>
-      <body className="bg-[#05060f] text-white selection:bg-indigo-500/30">
+    <html lang="en" className={`${jakarta.variable} dark`} suppressHydrationWarning>
+      <body className={`${jakarta.variable} font-sans bg-[#05060f] text-white selection:bg-indigo-500/30`}>
         <div className="flex flex-col min-h-screen">
           {children}
         </div>
