@@ -56,7 +56,7 @@ export default function Dashboard() {
 
         <nav className="flex flex-col gap-6">
           <div className="sidebar-icon active"><Home size={22} /></div>
-          <div className="sidebar-icon"><MessageSquare size={22} /></div>
+          <button onClick={() => router.push('/chat')} className="sidebar-icon" title="Messages"><MessageSquare size={22} /></button>
           <div className="sidebar-icon"><Clock size={22} /></div>
           <div className="sidebar-icon"><Settings size={22} /></div>
         </nav>

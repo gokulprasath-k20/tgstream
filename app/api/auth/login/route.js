@@ -41,20 +41,32 @@ export async function POST(req) {
     // Reset on success
     loginAttempts.delete(ip);
 
-    const token = signToken({ id: user._id, username: user.username, email: user.email });
+    const token = signToken({
+      id:          user._id,
+      username:    user.username,
+      email:       user.email,
+      tgId:        user.tgId || null,
+      chatPrivacy: user.chatPrivacy || 'everyone',
+    });
 
     const cookieStore = await cookies();
     cookieStore.set('token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 3600, // 1 hour
+      maxAge: 3600,
       path: '/',
     });
 
     return NextResponse.json({
       message: 'Login successful',
-      user: { id: user._id, username: user.username, email: user.email }
+      user: {
+        id:          user._id,
+        username:    user.username,
+        email:       user.email,
+        tgId:        user.tgId || null,
+        chatPrivacy: user.chatPrivacy || 'everyone',
+      },
     });
   } catch (error) {
     console.error('Login error:', error);
