@@ -246,12 +246,39 @@ export default function VideoCall({
       screenSendersRef.current[id] = [];
 
       if (localScreenStream) {
-        // Set quality hint so browser optimises for text/UI instead of motion
+        // Set quality hint: detail = sharp text/UI, less motion smoothing
         localScreenStream.getVideoTracks().forEach(t => { t.contentHint = 'detail'; });
-        // Add all tracks — video + audio (system/tab audio if user permitted it)
+
+        // Add video + audio tracks to the PC
         localScreenStream.getTracks().forEach(track => {
           const sender = pc.addTrack(track, localScreenStream);
           screenSendersRef.current[id].push(sender);
+
+          // Apply bitrate limits — screen share at 2 Mbps / 15fps is plenty for P2P
+          // Must retry because encodings may be empty before negotiation completes
+          const applyParams = () => {
+            const params = sender.getParameters();
+            if (!params.encodings?.length) return false;
+            if (track.kind === 'video') {
+              params.encodings[0].maxBitrate = 2_000_000;  // 2 Mbps
+              params.encodings[0].maxFramerate = 15;        // matches capture constraint
+              params.encodings[0].priority = 'high';
+            }
+            if (track.kind === 'audio') {
+              params.encodings[0].priority = 'high';
+            }
+            sender.setParameters(params).catch(() => {});
+            return true;
+          };
+
+          // Try immediately, then retry after negotiation settles
+          if (!applyParams()) {
+            const t1 = setTimeout(() => { if (!applyParams()) {
+              const t2 = setTimeout(applyParams, 3000);
+              return () => clearTimeout(t2);
+            }}, 1500);
+            return () => clearTimeout(t1);
+          }
         });
       }
     });
