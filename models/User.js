@@ -55,6 +55,9 @@ const UserSchema = new mongoose.Schema({
   // ── E2EE public key (private key stays client-side in IndexedDB) ──────────
   publicKey: { type: String },  // ECDH P-256 spki → base64
 
+  // ── Push notifications FCM Tokens ──────────────────────────────────────────
+  fcmTokens: { type: [String], default: [] },
+
   // ── Profile ────────────────────────────────────────────────────────────────
   bio:      { type: String, maxlength: 160, default: '' },
   lastSeen: { type: Date },

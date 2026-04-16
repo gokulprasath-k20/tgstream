@@ -217,6 +217,7 @@ export default function ChatWindow({
   onlineUsers,
   typing,
   onConversationUpdate,
+  mobileMode = false,
 }) {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading]   = useState(false);
@@ -323,30 +324,32 @@ export default function ChatWindow({
   const isOnline = other && onlineUsers?.has(other._id);
 
   return (
-    <div className="flex-1 flex flex-col min-w-0 bg-[#05060f]">
+    <div className={`flex flex-col min-w-0 bg-[#05060f] ${mobileMode ? 'absolute inset-0 z-10 animate-slide-in-right' : 'flex-1'}`}>
       {/* Header */}
-      <div className="flex items-center gap-3 px-5 py-4 border-b border-white/8 bg-[#0a0b15] flex-shrink-0">
-        <div className="relative">
-          <div className="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center font-bold text-white">
-            {other?.username?.[0]?.toUpperCase() || '?'}
+      {!mobileMode && (
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-white/8 bg-[#0a0b15] flex-shrink-0">
+          <div className="relative">
+            <div className="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center font-bold text-white">
+              {other?.username?.[0]?.toUpperCase() || '?'}
+            </div>
+            {isOnline && <div className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-green-400 border-2 border-[#0a0b15]" />}
           </div>
-          {isOnline && <div className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-green-400 border-2 border-[#0a0b15]" />}
+          <div className="flex-1 min-w-0">
+            <p className="font-bold text-white">{other?.username || 'Unknown'}</p>
+            <p className="text-xs text-gray-400">
+              {typing ? <span className="text-indigo-400 italic">typing…</span> : isOnline ? '🟢 Online' : 'Offline'}
+            </p>
+          </div>
+          {/* Voice call button */}
+          <button
+            onClick={() => window.__initiateVoiceCall?.(other?._id, other?.username)}
+            className="w-9 h-9 rounded-xl hover:bg-green-600/20 text-gray-400 hover:text-green-400 flex items-center justify-center transition-colors"
+            title="Voice call"
+          >
+            <Phone size={18} />
+          </button>
         </div>
-        <div className="flex-1 min-w-0">
-          <p className="font-bold text-white">{other?.username || 'Unknown'}</p>
-          <p className="text-xs text-gray-400">
-            {typing ? <span className="text-indigo-400 italic">typing…</span> : isOnline ? '🟢 Online' : 'Offline'}
-          </p>
-        </div>
-        {/* Voice call button */}
-        <button
-          onClick={() => window.__initiateVoiceCall?.(other?._id, other?.username)}
-          className="w-9 h-9 rounded-xl hover:bg-green-600/20 text-gray-400 hover:text-green-400 flex items-center justify-center transition-colors"
-          title="Voice call"
-        >
-          <Phone size={18} />
-        </button>
-      </div>
+      )}
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-1">

@@ -83,7 +83,7 @@ export default function MessageInput({
   const togglePanel = (name) => setPanel(p => (p === name ? null : name));
 
   return (
-    <div className="flex-shrink-0 bg-[#0a0b15]">
+    <div className="flex-shrink-0 bg-[#0a0b15] pb-safe">
       {/* ── Panels (appear above input row) ─────────────────────────────── */}
 
       {/* Emoji picker */}

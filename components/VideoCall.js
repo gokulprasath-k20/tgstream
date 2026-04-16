@@ -73,7 +73,10 @@ export default function VideoCall({
     let cancelled = false;
 
     navigator.mediaDevices
-      .getUserMedia({ video: true, audio: true })
+      .getUserMedia({
+        video: { width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { max: 24 } },
+        audio: true
+      })
       .then((stream) => {
         if (cancelled) { stream.getTracks().forEach(t => t.stop()); return; }
         // 'motion' hint tells the browser this is a live webcam — prioritise smoothness
@@ -172,8 +175,8 @@ export default function VideoCall({
         if (!params.encodings || params.encodings.length === 0) return;
         if (sender.track.kind === 'video') {
           const isScreen = sender.track.contentHint === 'detail';
-          params.encodings[0].maxBitrate = isScreen ? 3_500_000 : 1_500_000;
-          params.encodings[0].maxFramerate = 30;
+          params.encodings[0].maxBitrate = isScreen ? 2_000_000 : 500_000; // Lower bitrate to prevent lag
+          params.encodings[0].maxFramerate = isScreen ? 30 : 24;
           if (isScreen) params.encodings[0].priority = 'high';
           sender.setParameters(params).catch(() => {});
         }

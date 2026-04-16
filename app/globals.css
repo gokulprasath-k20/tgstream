@@ -2,6 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── CSS Custom Properties ─────────────────────────────────────────────────── */
 :root {
   --background: #05060f;
   --foreground: #ffffff;
@@ -11,18 +12,45 @@
   --muted: #94a3b8;
   --border: rgba(255, 255, 255, 0.1);
   --card-bg: rgba(255, 255, 255, 0.03);
+
+  /* Safe area insets (populated by Capacitor / iOS / Android) */
+  --safe-top:    env(safe-area-inset-top,    0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left:   env(safe-area-inset-left,   0px);
+  --safe-right:  env(safe-area-inset-right,  0px);
+
+  /* Bottom nav height + safe area */
+  --bottom-nav-h: 60px;
+  --bottom-nav-total: calc(var(--bottom-nav-h) + var(--safe-bottom));
 }
 
+/* ── Base Layer ─────────────────────────────────────────────────────────────── */
 @layer base {
   * {
     @apply border-white/5;
+    -webkit-tap-highlight-color: transparent;
+    box-sizing: border-box;
+  }
+  html, body {
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
   }
   body {
     @apply bg-[#05060f] text-white selection:bg-indigo-500/30 overflow-x-hidden;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    /* Prevent rubber-band scroll on iOS */
+    overscroll-behavior: none;
+    /* Better text rendering on mobile */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    /* Prevent text size adjust on orientation change */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
   }
 }
 
+/* ── Component Layer ────────────────────────────────────────────────────────── */
 @layer components {
   .card {
     @apply bg-white/5 border border-white/10 rounded-2xl p-8 backdrop-blur-xl shadow-2xl;
@@ -50,103 +78,140 @@
   }
 }
 
-/* Custom Animations */
-@keyframes slideUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+/* ── Utility Layer ──────────────────────────────────────────────────────────── */
+@layer utilities {
+  /* Safe-area padding helpers */
+  .pt-safe  { padding-top:    var(--safe-top); }
+  .pb-safe  { padding-bottom: var(--safe-bottom); }
+  .pl-safe  { padding-left:   var(--safe-left); }
+  .pr-safe  { padding-right:  var(--safe-right); }
+
+  /* Hide scrollbar but keep scrolling */
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+  /* Momentum scroll (iOS) */
+  .scroll-touch { -webkit-overflow-scrolling: touch; }
+
+  /* Thin scrollbar for desktops */
+  .scrollbar-thin::-webkit-scrollbar { width: 4px; }
+  .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+  .scrollbar-thin::-webkit-scrollbar-thumb { @apply bg-white/10 rounded-full; }
+
+  /* Full mobile screen — accounts for safe areas */
+  .h-mobile-screen {
+    height: 100dvh;
+  }
+
+  /* Content area that sits between header and bottom nav */
+  .flex-content-area {
+    flex: 1 1 0%;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Touch-friendly tap targets */
+  .tap-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
 }
 
+/* ── Mobile App Shell ───────────────────────────────────────────────────────── */
+
+/* The top status bar area in Capacitor */
+.capacitor-status-bar {
+  height: var(--safe-top);
+  background: #05060f;
+}
+
+/* ── Animations ─────────────────────────────────────────────────────────────── */
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
 .animate-slide-up {
   animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 @keyframes fadeIn {
   from { opacity: 0; }
-  to { opacity: 1; }
+  to   { opacity: 1; }
 }
-
 .animate-fade-in {
   animation: fadeIn 0.8s ease-out forwards;
 }
 
 @keyframes slideInRight {
-  from { opacity: 0; transform: translateX(120%); }
+  from { opacity: 0; transform: translateX(100%); }
   to   { opacity: 1; transform: translateX(0); }
 }
-
 .animate-slide-in-right {
-  animation: slideInRight 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Scrollbar Styling */
-::-webkit-scrollbar {
-  width: 8px;
+@keyframes slideOutRight {
+  from { opacity: 1; transform: translateX(0); }
+  to   { opacity: 0; transform: translateX(100%); }
+}
+.animate-slide-out-right {
+  animation: slideOutRight 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-::-webkit-scrollbar-track {
-  @apply bg-[#05060f];
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-100%); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.animate-slide-in-left {
+  animation: slideInLeft 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-::-webkit-scrollbar-thumb {
-  @apply bg-white/10 rounded-full hover:bg-white/20 transition-colors;
+/* Bounce dots (typing indicator) */
+@keyframes typingBounce {
+  0%, 60%, 100% { transform: translateY(0); }
+  30%           { transform: translateY(-4px); }
+}
+.typing-dot {
+  animation: typingBounce 1.2s infinite;
 }
 
-/* Room Layout Implementation */
-.theme-container {
-  @apply h-screen flex flex-col bg-[#05060f] text-white;
-}
+/* ── Desktop Scrollbar ──────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { @apply bg-[#05060f]; }
+::-webkit-scrollbar-thumb { @apply bg-white/10 rounded-full hover:bg-white/20 transition-colors; }
 
-.main-wrapper {
-  @apply flex-1 flex overflow-hidden;
-}
+/* ── Room Layout (Video call page) ─────────────────────────────────────────── */
+.theme-container  { @apply h-screen flex flex-col bg-[#05060f] text-white; }
+.main-wrapper     { @apply flex-1 flex overflow-hidden; }
+.media-stage      { @apply flex-1 relative bg-black; }
+.side-panel       { @apply w-[360px] bg-[#0a0b14] border-l border-white/5 flex flex-col; }
+.participant-strip { @apply w-[300px] bg-[#0a0b14]/50 border-l border-white/5 flex flex-col p-4 gap-4 overflow-y-auto; }
+.participant-tile { @apply relative aspect-video bg-[#111] rounded-xl overflow-hidden border border-white/10 shadow-lg; }
+.tile-overlay     { @apply absolute bottom-3 left-3 bg-black/60 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider backdrop-blur-md; }
+.bottom-bar       { @apply h-[80px] bg-[#05060f] border-t border-white/5 px-6 flex items-center justify-between; }
+.circle-btn       { @apply w-12 h-12 rounded-full flex items-center justify-center bg-white/5 border border-white/10 hover:bg-white/10 transition-all; }
+.circle-btn.danger { @apply bg-red-600/20 border-red-600/50 text-red-500 hover:bg-red-600 hover:text-white; }
+.bar-center       { @apply flex items-center gap-4; }
 
-.media-stage {
-  @apply flex-1 relative bg-black;
-}
-
-.side-panel {
-  @apply w-[360px] bg-[#0a0b14] border-l border-white/5 flex flex-col;
-}
-
-.participant-strip {
-  @apply w-[300px] bg-[#0a0b14]/50 border-l border-white/5 flex flex-col p-4 gap-4 overflow-y-auto;
-}
-
-.participant-tile {
-  @apply relative aspect-video bg-[#111] rounded-xl overflow-hidden border border-white/10 shadow-lg;
-}
-
-.tile-overlay {
-  @apply absolute bottom-3 left-3 bg-black/60 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider backdrop-blur-md;
-}
-
-.bottom-bar {
-  @apply h-[80px] bg-[#05060f] border-t border-white/5 px-6 flex items-center justify-between;
-}
-
-.circle-btn {
-  @apply w-12 h-12 rounded-full flex items-center justify-center bg-white/5 border border-white/10 hover:bg-white/10 transition-all;
-}
-
-.circle-btn.danger {
-  @apply bg-red-600/20 border-red-600/50 text-red-500 hover:bg-red-600 hover:text-white;
-}
-
-.bar-center {
-  @apply flex items-center gap-4;
-}
-
-/* Dashboard Specifics */
+/* ── Dashboard ──────────────────────────────────────────────────────────────── */
 .sidebar-icon {
   @apply w-12 h-12 rounded-2xl flex items-center justify-center text-gray-500 hover:bg-white/5 hover:text-indigo-400 transition-all cursor-pointer;
 }
-
 .sidebar-icon.active {
   @apply bg-indigo-600/10 text-indigo-500 shadow-lg shadow-indigo-600/5;
 }
-
 .dashboard-card {
   @apply bg-white/[0.03] border border-white/5 rounded-[32px] p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-white/[0.06] transition-all;
 }
 
-
+/* ── Skeleton Loader ────────────────────────────────────────────────────────── */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}

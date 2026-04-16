@@ -8,17 +8,31 @@ const jakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata = {
-  title: 'TGStream - Premium Watch Parties',
-  description: 'Experience the ultimate watch party with high-quality streaming and video calls.',
+  title: 'TGStream',
+  description: 'Private, secure messaging — instantly.',
+};
+
+// Next.js 16 separates viewport config from metadata
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: 'cover',
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en" className={`${jakarta.variable} dark`} suppressHydrationWarning>
+      <head>
+        {/* Capacitor / PWA meta */}
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="theme-color" content="#05060f" />
+      </head>
       <body className={`${jakarta.variable} font-sans bg-[#05060f] text-white selection:bg-indigo-500/30`}>
-        <div className="flex flex-col min-h-screen">
-          {children}
-        </div>
+        {children}
       </body>
     </html>
   );
