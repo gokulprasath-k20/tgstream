@@ -17,8 +17,13 @@ export default function SignUp() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, email, password }),
     });
-    if (res.ok) router.push('/login');
-    else alert('Signup failed');
+    if (res.ok) {
+      router.push('/login');
+    } else {
+      const data = await res.json();
+      alert(`Signup failed: ${data.error || 'Unknown error'}`);
+      console.error('Signup error:', data);
+    }
   };
 
   return (

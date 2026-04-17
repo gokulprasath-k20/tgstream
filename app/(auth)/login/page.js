@@ -20,7 +20,9 @@ export default function Login() {
       router.push('/dashboard');
       router.refresh();
     } else {
-      alert('Invalid credentials');
+      const data = await res.json().catch(() => ({}));
+      alert(`Login failed: ${data.error || 'Invalid credentials'}`);
+      console.error('Login error:', data);
     }
   };
 
