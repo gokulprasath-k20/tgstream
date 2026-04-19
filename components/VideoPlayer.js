@@ -27,8 +27,8 @@ export default function VideoPlayer({ socket, roomId, isHost, localScreenStream,
         const stream = await navigator.mediaDevices.getDisplayMedia({ 
           video: { 
             frameRate: { ideal: 10, max: 15 },
-            width:     { ideal: 1280, max: 1920 }, 
-            height:    { ideal: 720,  max: 1080 }
+            width:     { ideal: 1280, max: 1280 }, 
+            height:    { ideal: 720,  max: 720 }
           },
           audio: { 
             echoCancellation: false, 

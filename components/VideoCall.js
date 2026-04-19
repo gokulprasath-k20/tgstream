@@ -74,7 +74,7 @@ export default function VideoCall({
 
     navigator.mediaDevices
       .getUserMedia({
-        video: { width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { max: 24 } },
+        video: { width: { ideal: 320, max: 640 }, height: { ideal: 240, max: 480 }, frameRate: { ideal: 15, max: 20 } },
         audio: true
       })
       .then((stream) => {
@@ -175,8 +175,9 @@ export default function VideoCall({
         if (!params.encodings || params.encodings.length === 0) return;
         if (sender.track.kind === 'video') {
           const isScreen = sender.track.contentHint === 'detail';
-          params.encodings[0].maxBitrate = isScreen ? 2_000_000 : 500_000; // Lower bitrate to prevent lag
-          params.encodings[0].maxFramerate = isScreen ? 30 : 24;
+          // Further lowered bitrate to prevent lag
+          params.encodings[0].maxBitrate = isScreen ? 1_000_000 : 250_000; 
+          params.encodings[0].maxFramerate = isScreen ? 15 : 20;
           if (isScreen) params.encodings[0].priority = 'high';
           sender.setParameters(params).catch(() => {});
         }
@@ -263,7 +264,7 @@ export default function VideoCall({
             const params = sender.getParameters();
             if (!params.encodings?.length) return false;
             if (track.kind === 'video') {
-              params.encodings[0].maxBitrate = 2_000_000;  // 2 Mbps
+              params.encodings[0].maxBitrate = 1_000_000;  // 1 Mbps
               params.encodings[0].maxFramerate = 15;        // matches capture constraint
               params.encodings[0].priority = 'high';
             }
